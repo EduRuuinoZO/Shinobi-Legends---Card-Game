@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shinobi Legends - Card Game</title>
+  <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico" type="image/x-icon">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { ninja: ['Rajdhani', 'sans-serif'] },
+          colors: {
+            shinobi: { dark: '#0f172a', mid: '#1e293b', light: '#334155', accent: '#6366f1', glow: '#818cf8', gold: '#f59e0b' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-shinobi-dark text-slate-100 font-ninja min-h-screen">
+
+  <!-- TOP NAV BAR -->
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-shinobi-mid/95 backdrop-blur-sm border-b border-slate-700 px-4 py-2">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent tracking-wider">⚔️ SHINOBI LEGENDS</h1>
+      </div>
+      <div class="flex items-center gap-4 text-sm">
+        <span id="navGold" class="text-shinobi-gold font-bold">💰 0G</span>
+        <span id="navCards" class="text-slate-400">🃏 0 cards</span>
+        <span id="navFloor" class="text-green-400">🏯 Floor 1</span>
+        <span id="navPvp" class="text-purple-400">⚔️ PVP: 0</span>
+        <span id="navUser" class="text-slate-300 font-semibold">👤 EduardoNinja123</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN NAVIGATION TABS -->
+  <div class="fixed top-[52px] left-0 right-0 z-40 bg-shinobi-dark/95 backdrop-blur-sm border-b border-slate-700">
+    <div class="max-w-7xl mx-auto flex overflow-x-auto scrollbar-hide">
+      <button onclick="Game.showScreen('home')" class="nav-tab active" data-tab="home">🏠 Home</button>
+      <button onclick="Game.showScreen('gacha')" class="nav-tab" data-tab="gacha">🎰 Gacha</button>
+      <button onclick="Game.showScreen('inventory')" class="nav-tab" data-tab="inventory">🃏 Inventory</button>
+      <button onclick="Game.showScreen('squad')" class="nav-tab" data-tab="squad">👥 Squad</button>
+      <button onclick="Game.showScreen('battle')" class="nav-tab" data-tab="battle">⚔️ Battle</button>
+      <button onclick="Game.showScreen('tower')" class="nav-tab" data-tab="tower">🏯 Tower</button>
+      <button onclick="Game.showScreen('pvp')" class="nav-tab" data-tab="pvp">🆚 PVP</button>
+      <button onclick="Game.showScreen('equipment')" class="nav-tab" data-tab="equipment">🛡️ Equipment</button>
+      <button onclick="Game.showScreen('market')" class="nav-tab" data-tab="market">🏪 Market</button>
+      <button onclick="Game.showScreen('ranking')" class="nav-tab" data-tab="ranking">🏆 Ranking</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT AREA -->
+  <main class="pt-[100px] pb-8 px-4 max-w-7xl mx-auto">
+
+    <!-- HOME SCREEN -->
+    <section id="screen-home" class="screen active">
+      <div class="text-center py-8">
+        <h2 class="text-5xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-4 tracking-wider">SHINOBI LEGENDS</h2>
+        <p class="text-slate-400 text-lg mb-8">Collect ninjas, build your squad, dominate the battlefield!</p>
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div class="stat-card">
+            <div class="text-3xl font-bold text-shinobi-gold" id="homeGold">0</div>
+            <div class="text-slate-400 text-sm">Gold</div>
+          </div>
+          <div class="stat-card">
+            <div class="text-3xl font-bold text-indigo-400" id="homeCards">0</div>
+            <div class="text-slate-400 text-sm">Cards</div>
+          </div>
+          <div class="stat-card">
+            <div class="text-3xl font-bold text-green-400" id="homeFloor">1</div>
+            <div class="text-slate-400 text-sm">Tower Floor</div>
+          </div>
+          <div class="stat-card">
+            <div class="text-3xl font-bold text-purple-400" id="homePvp">0</div>
+            <div class="text-slate-400 text-sm">PVP Points</div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-4">
+          <button onclick="Game.claimDaily()" class="btn-primary text-lg px-8 py-3">
+            🎁 Daily Mission (+500G)
+          </button>
+          <button onclick="Game.showScreen('gacha')" class="btn-secondary text-lg px-8 py-3">
+            🎰 Open Packs
+          </button>
+        </div>
+        <div id="dailyTimer" class="mt-4 text-slate-400 text-sm hidden"></div>
+      </div>
+    </section>
+
+    <!-- GACHA SCREEN -->
+    <section id="screen-gacha" class="screen">
+      <h2 class="section-title">🎰 Gacha - Open Packs</h2>
+      <p class="text-slate-400 mb-6">Spend 100G to open a pack of 5 random ninja cards!</p>
+      <button onclick="Game.openPack()" class="btn-primary text-xl px-10 py-4 mb-8">
+        Open Pack (100G) 🎴
+      </button>
+      <div id="gachaResults" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
+    </section>
+
+    <!-- INVENTORY SCREEN -->
+    <section id="screen-inventory" class="screen">
+      <h2 class="section-title">🃏 Inventory</h2>
+      <div class="flex flex-wrap gap-3 mb-6">
+        <input type="text" id="searchInput" placeholder="Search cards..." oninput="Game.renderInventory()" class="bg-shinobi-light border border-slate-600 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none">
+        <select id="filterRarity" onchange="Game.renderInventory()" class="bg-shinobi-light border border-slate-600 rounded-lg px-4 py-2 text-slate-100">
+          <option value="">All Rarities</option>
+          <option value="Common">Common</option>
+          <option value="Rare">Rare</option>
+          <option value="Epic">Epic</option>
+          <option value="Legendary">Legendary</option>
+          <option value="SSR">SSR</option>
+          <option value="UR">UR</option>
+        </select>
+        <select id="filterElement" onchange="Game.renderInventory()" class="bg-shinobi-light border border-slate-600 rounded-lg px-4 py-2 text-slate-100">
+          <option value="">All Elements</option>
+          <option value="Fire">🔥 Fire</option>
+          <option value="Wind">🌪️ Wind</option>
+          <option value="Lightning">⚡ Lightning</option>
+          <option value="Earth">🌍 Earth</option>
+          <option value="Water">💧 Water</option>
+        </select>
+        <select id="sortBy" onchange="Game.renderInventory()" class="bg-shinobi-light border border-slate-600 rounded-lg px-4 py-2 text-slate-100">
+          <option value="rarity">Sort: Rarity</option>
+          <option value="atk">Sort: ATK</option>
+          <option value="hp">Sort: HP</option>
+          <option value="level">Sort: Level</option>
+          <option value="name">Sort: Name</option>
+        </select>
+      </div>
+      <div id="inventoryGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+    </section>
+
+    <!-- SQUAD SCREEN -->
+    <section id="screen-squad" class="screen">
+      <h2 class="section-title">👥 Squad Builder</h2>
+      <p class="text-slate-400 mb-4">Select up to 5 cards for your battle squad.</p>
+      <div id="squadSlots" class="grid grid-cols-5 gap-4 mb-6">
+        <div class="squad-slot empty">Slot 1</div>
+        <div class="squad-slot empty">Slot 2</div>
+        <div class="squad-slot empty">Slot 3</div>
+        <div class="squad-slot empty">Slot 4</div>
+        <div class="squad-slot empty">Slot 5</div>
+      </div>
+      <button onclick="Game.saveSquad()" class="btn-primary mb-6">💾 Save Squad</button>
+      <h3 class="text-lg font-bold text-slate-300 mb-3">Available Cards:</h3>
+      <div id="squadAvailable" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+    </section>
+
+    <!-- BATTLE SCREEN -->
+    <section id="screen-battle" class="screen">
+      <h2 class="section-title">⚔️ Battle Arena</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <button onclick="Game.startSquadBattle()" class="battle-mode-btn">
+          <div class="text-4xl mb-2">🎮</div>
+          <div class="text-xl font-bold">Arcade Mode</div>
+          <div class="text-slate-400 text-sm">Fight random enemy squads</div>
+        </button>
+        <button onclick="Game.startBossBattle()" class="battle-mode-btn">
+          <div class="text-4xl mb-2">🐍</div>
+          <div class="text-xl font-bold">Final Boss</div>
+          <div class="text-slate-400 text-sm">Supreme Orochimaru (ATK 250)</div>
+        </button>
+        <button onclick="Game.showScreen('pvp')" class="battle-mode-btn">
+          <div class="text-4xl mb-2">🆚</div>
+          <div class="text-xl font-bold">PVP Arena</div>
+          <div class="text-slate-400 text-sm">Challenge other players</div>
+        </button>
+      </div>
+      <h3 class="text-lg font-bold text-slate-300 mb-3">Quick Battle (Single Card):</h3>
+      <div id="quickBattleCards" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+    </section>
+
+    <!-- TOWER SCREEN -->
+    <section id="screen-tower" class="screen">
+      <h2 class="section-title">🏯 Ninja Tower</h2>
+      <div class="bg-shinobi-mid rounded-xl p-6 border border-slate-700 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="text-2xl font-bold text-indigo-400">Floor <span id="towerFloor">1</span></div>
+            <div class="text-slate-400" id="towerDifficulty">Difficulty: Common/Rare</div>
+          </div>
+          <div class="text-right">
+            <div class="text-shinobi-gold font-bold" id="towerGoldReward">Reward: 75G</div>
+            <div class="text-green-400" id="towerXpReward">XP: 30</div>
+            <div class="text-purple-400" id="towerEqReward"></div>
+          </div>
+        </div>
+        <div id="towerEnemies" class="mb-4"></div>
+        <div class="flex gap-4">
+          <button onclick="Game.fightTower()" class="btn-primary flex-1">⚔️ Fight Floor</button>
+          <button onclick="Game.resetTower()" id="towerResetBtn" class="btn-secondary">🔄 Reset Tower</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PVP SCREEN -->
+    <section id="screen-pvp" class="screen">
+      <h2 class="section-title">🆚 PVP Arena</h2>
+      <div class="bg-shinobi-mid rounded-xl p-6 border border-slate-700 mb-6">
+        <div class="grid grid-cols-3 gap-4 mb-6 text-center">
+          <div>
+            <div class="text-2xl font-bold text-purple-400" id="pvpPoints">0</div>
+            <div class="text-slate-400 text-sm">PVP Points</div>
+          </div>
+          <div>
+            <div class="text-2xl font-bold text-green-400" id="pvpWins">0</div>
+            <div class="text-slate-400 text-sm">Wins</div>
+          </div>
+          <div>
+            <div class="text-2xl font-bold text-red-400" id="pvpLosses">0</div>
+            <div class="text-slate-400 text-sm">Losses</div>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <input type="text" id="pvpTarget" placeholder="Enter opponent username..." class="flex-1 bg-shinobi-light border border-slate-600 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none">
+          <button onclick="Game.challengePvp()" class="btn-primary px-8">⚔️ Challenge!</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- EQUIPMENT SCREEN -->
+    <section id="screen-equipment" class="screen">
+      <h2 class="section-title">🛡️ Equipment</h2>
+      <div class="mb-6">
+        <h3 class="text-lg font-bold text-slate-300 mb-3">Unequipped Items:</h3>
+        <div id="equipmentList" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
+        <div id="noEquipment" class="text-slate-500 text-center py-8 hidden">No equipment yet. Conquer tower floors to earn equipment!</div>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-slate-300 mb-3">Equip on Card:</h3>
+        <select id="equipCardSelect" class="bg-shinobi-light border border-slate-600 rounded-lg px-4 py-2 text-slate-100 mb-4 w-full max-w-md">
+          <option value="">Select a card to equip...</option>
+        </select>
+        <div id="equipCardSlots" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+      </div>
+    </section>
+
+    <!-- MARKET SCREEN -->
+    <section id="screen-market" class="screen">
+      <h2 class="section-title">🏪 Market - Sell Cards</h2>
+      <p class="text-slate-400 mb-6">Sell unwanted cards for gold. Price based on rarity, level, and stars.</p>
+      <div id="marketGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+    </section>
+
+    <!-- RANKING SCREEN -->
+    <section id="screen-ranking" class="screen">
+      <h2 class="section-title">🏆 Rankings</h2>
+      <div class="flex gap-4 mb-6">
+        <button onclick="Game.showRanking('level')" class="btn-primary ranking-tab active" data-ranking="level">📊 Level Ranking</button>
+        <button onclick="Game.showRanking('pvp')" class="btn-secondary ranking-tab" data-ranking="pvp">⚔️ PVP Ranking</button>
+      </div>
+      <div id="rankingTable" class="bg-shinobi-mid rounded-xl border border-slate-700 overflow-hidden"></div>
+    </section>
+  </main>
+
+  <!-- CARD DETAIL MODAL -->
+  <div id="cardDetailModal" class="modal-overlay hidden" onclick="if(event.target===this)Game.closeCardDetail()">
+    <div class="modal-content max-w-lg">
+      <button onclick="Game.closeCardDetail()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl">&times;</button>
+      <div id="cardDetailContent"></div>
+    </div>
+  </div>
+
+  <!-- BATTLE VISUAL MODAL -->
+  <div id="battleModal" class="modal-overlay hidden">
+    <div class="battle-arena">
+      <div id="battleBackground" class="battle-bg"></div>
+      <div class="battle-content">
+        <div id="battleLocationName" class="text-center text-lg font-bold text-white/80 mb-2 tracking-wider"></div>
+        <div class="battle-teams">
+          <div id="battlePlayerSide" class="battle-side player-side"></div>
+          <div class="battle-vs">VS</div>
+          <div id="battleEnemySide" class="battle-side enemy-side"></div>
+        </div>
+        <div id="battleLog" class="battle-log"></div>
+        <div id="battleResult" class="battle-result hidden"></div>
+        <button onclick="Game.closeBattle()" id="battleCloseBtn" class="btn-primary mt-4 hidden">Close Battle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2"></div>
+
+  <script src="./script.js"></script>
+</body>
+</html>
