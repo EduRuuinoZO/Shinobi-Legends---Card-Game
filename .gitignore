@@ -1,0 +1,22 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# TypeScript
+dist/
+build/
+
+# Laravel / PHP
+vendor/
+.env
+storage/logs/
+bootstrap/cache/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
