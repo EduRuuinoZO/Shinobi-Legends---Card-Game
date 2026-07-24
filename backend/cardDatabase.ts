@@ -263,6 +263,19 @@ export const BATTLE_BACKGROUNDS = [
   { name: 'Hokage Monument', url: 'https://mgx-backend-cdn.metadl.com/generate/images/986451/2026-02-24/c00c205f-4993-4b86-8bd3-39346ef8de9e.png' }
 ];
 
+export const NINJA_IMAGES: Record<string, string> = {
+  'Naruto Uzumaki':  'https://i.imgur.com/YourNarutoImg.png',
+  'Sasuke Uchiha':   'https://i.imgur.com/YourSasukeImg.png',
+  'Kakashi Hatake':  'https://i.imgur.com/YourKakashiImg.png',
+  'Sakura Haruno':   'https://i.imgur.com/YourSakuraImg.png',
+  'Gaara':           'https://i.imgur.com/YourGaaraImg.png',
+  'Rock Lee':        'https://i.imgur.com/YourRockLeeImg.png',
+  'Hinata Hyuga':    'https://i.imgur.com/YourHinataImg.png',
+  'Shikamaru Nara':  'https://i.imgur.com/YourShikaImg.png',
+  'Itachi Uchiha':   'https://i.imgur.com/YourItachiImg.png',
+  'Minato Namikaze': 'https://i.imgur.com/YourMinatoImg.png',
+};
+
 export function getRandomBackground() {
   return BATTLE_BACKGROUNDS[Math.floor(Math.random() * BATTLE_BACKGROUNDS.length)];
 }

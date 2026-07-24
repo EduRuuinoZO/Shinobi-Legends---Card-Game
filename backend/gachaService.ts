@@ -1,5 +1,6 @@
 import { BASE_NINJAS, RARITY_MULTIPLIERS, RARITY_WEIGHTS, getElementMultiplier, applyLevelUp, getXpToNextLevel } from './cardDatabase';
 import { ICard, IUser } from './User';
+import { NINJA_IMAGES } from './cardDatabase';
 
 // ============================================
 // GACHA SERVICE
@@ -21,6 +22,8 @@ export function generateCard(): ICard {
   const mult = RARITY_MULTIPLIERS[rarity] || 1;
   const atk = Math.floor(base.baseAtk * mult);
   const hp = Math.floor(base.baseHp * mult);
+
+  const image = NINJA_IMAGES[base.name] || '';
 
   return {
     id: `ninja-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,

@@ -95,26 +95,31 @@ function showToast(message, type) {
 function renderCardHTML(card, options) {
   if (card == null) return '';
   var opts = options || {};
-  var emoji = getNinjaEmoji(card.name);
-  var elementIcon = ELEMENT_ICONS[card.element] || '❓';
+  var elementIcon = ELEMENTO_ICONS[card.element] || '❓';
   var rankInfo = getRankInfo(card.evolutionPoints);
-  var starsStr = card.stars > 0 ? '⭐'.repeat(Math.min(card.stars, 7)) : '';
+  var starsStr = card.stars > 0 ? '⭐'.repeat(Math.min(card.stars, 7)) : 'None';
   var selectedClass = opts.selected ? ' selected' : '';
-  var clickAction = opts.onClick || '';
-  var awakenedBadge = card.awakened ? '<div class="text-xs text-pink-400 font-bold mt-1">✨ AWAKENED</div>' : '';
+  var clickAction = ops.onClick || '';
+  var awakenedBadge = card.awakened 
+   ? '<div class="text-xs text-pink-400 font-bold mt-1">✨ AWAKENED ✨</div>'
+    : '';
+  
+  var cardImage = card.image 
+  ? '<img src="' + card.image + '" alt="' + card.name + '" class="w-16 h-16 object-cover rounded-lg mx-auto" onerror="this.style.display=\'none\'">' 
+  : '<div class="text-4xl text-center">' + getNinjaEmoji(card.name) + '</div>';
 
   return '<div class="ninja-card rarity-' + card.rarity + selectedClass + '" onclick="' + clickAction + '" title="' + card.name + '">' +
     '<div class="card-level">Lv.' + card.level + '</div>' +
     '<div class="card-element">' + elementIcon + '</div>' +
-    '<div class="card-image">' + emoji + '</div>' +
+    '<div class="card-image">' + cardImage + '</div>' +
     '<div class="card-name">' + card.name + '</div>' +
     '<div class="card-rarity rarity-color-' + card.rarity + '">' + card.rarity + ' ' + rankInfo.symbol + '</div>' +
-    awakenedBadge +
-    '<div class="card-stats">⚔️ ' + card.atk + ' | ❤️ ' + card.hp + '/' + card.maxHp + '</div>' +
-    (starsStr ? '<div class="card-stars">' + starsStr + '</div>' : '') +
+    awakenedBadge + 
+    '<div class="card-stats">⚔️ ' + card.atk + ' | ❤️ ' + card.maxHp + '/' + card.maxHp + '</div>' +
+    (starsStr ? '<div class="card-stars">' + starsStr + '</div>' : '') + 
     (opts.extra || '') +
     '</div>';
-}
+  }
 
 function renderEquipmentHTML(eq, options) {
   if (eq == null) return '';
@@ -433,40 +438,51 @@ async function sellCard(cardId) {
 // ============================================
 
 function renderSquadBuilder() {
-  state.selectedSquad = state.squad.slice();
-
-  // Render squad slots
+  if (state.selectedSquad.length === 0) {
+    state.selectedSquad = state.squad.slice();
+  }
+  
   var slotsContainer = document.getElementById('squadSlots');
   if (slotsContainer) {
     var slotsHTML = '';
     for (var i = 0; i < 5; i++) {
       var cardId = state.selectedSquad[i];
-      var card = cardId ? state.inventory.find(function(c) { return c != null && c.id === cardId; }) : null;
+      var card = cardId
+      ? state.inventory.find(function(c) { return c != null && c.id === cardId; })
+      : null;
+
       if (card) {
         slotsHTML += '<div class="squad-slot filled" onclick="Game.removeFromSquad(' + i + ')">' +
-          '<div class="text-center">' +
-            '<div class="text-2xl">' + getNinjaEmoji(card.name) + '</div>' +
-            '<div class="text-xs font-bold mt-1">' + card.name + '</div>' +
-            '<div class="text-xs text-slate-400">Lv.' + card.level + ' ⚔️' + card.atk + '</div>' +
-            '<div class="text-xs text-red-400 mt-1">Click to remove</div>' +
-          '</div></div>';
+         '<div class="text-center">' + 
+           '<div class="text-2x1">' + getNinjaEmoji(card.name) + '</div>' +
+           '<div class="text-xs font-bold mt-1">' + card.name + '</div>' +
+           '<div class="text-xs text-slate-400">Lv.' + card.level + ' ' + card.atk + '</div>' + 
+           '<div class="text-xs text-red-400 mt-1">Clique para remover</div>' +
+           '</div></div>';
       } else {
-        slotsHTML += '<div class="squad-slot empty">Slot ' + (i + 1) + '</div>';
+        slotsHTML += '<div class="squad-slot empty">' +
+          '<div class="text-slate-500 text-xs text-center">Slot ' + (i + 1) + '<br>Vazio</div>' +
+        '</div>';
       }
     }
     slotsContainer.innerHTML = slotsHTML;
   }
-
-  // Render available cards
+    
   var available = state.inventory.filter(function(c) {
     return c != null && state.selectedSquad.indexOf(c.id) === -1;
   });
 
   var availContainer = document.getElementById('squadAvailable');
   if (availContainer) {
-    availContainer.innerHTML = available.map(function(card) {
-  return renderCardHTML(card, { onClick: "Game.addToSquad(&quot;" + card.id + "&quot;)" });
-}).join('');
+    if (available.length === 0) {
+      availContainer.innerHTML = '<div class="text-slate-500 col-span-5 text-center py-8">Nenhuma carta disponível. Abra packs primeiro!</div>';
+    } else {
+      availContainer.innerHTML = available.map(function(card) {
+        return renderCardHTML(card, {
+          onClick: "Game.addToSquad(&quot;" + card.id + "&quot;)"
+        });
+      }).join('');
+    }
   }
 }
 
@@ -483,13 +499,20 @@ function removeFromSquad(index) {
 }
 
 async function saveSquad() {
-  if (state.selectedSquad.length === 0) { showToast('Select at least 1 card!', 'error'); return; }
+  if (state.selectedSquad.length === 0) {
+    showToast('Selecione pelo menos 1 card!', 'error');
+    return;
+  }
   try {
-    var data = await apiCall('/squad/set', 'POST', { username: USERNAME, cardIds: state.selectedSquad });
+    var data = await apiCall('/squad/set', 'POST', {
+      username: USERNAME,
+      cardIds: state.selectedSquad
+    });
     state.squad = state.selectedSquad.slice();
     showToast(data.message, 'success');
-  } catch (err) { /* shown */ }
-}
+    renderSquadBuilder();
+   } catch (err) { /* shown */ }
+  }
 
 // ============================================
 // BATTLE VISUAL SYSTEM
