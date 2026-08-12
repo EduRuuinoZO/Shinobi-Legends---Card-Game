@@ -5,7 +5,8 @@
   "main": "serve.ts",
   "scripts": {
     "dev": "npx ts-node serve.ts",
-    "start": "npx ts-node serve.ts"
+    "start": "npx ts-node serve.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "cors": "^2.8.6",

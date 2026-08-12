@@ -1,19 +1,46 @@
 /* ============================================
-   SHINOBI LEGENDS - CUSTOM STYLES
+   SHINOBI LEGENDS - CUSTOM STYLES & VARIABLES
    ============================================ */
+
+:root {
+  /* Cores Base do Tema Dark Shinobi */
+  --color-primary-bg: #0f172a;
+  --color-secondary-bg: #1e293b;
+  --color-card-bg: #334155;
+  --color-accent: #6366f1;
+  --color-accent-glow: #818cf8;
+  --color-gold: #f59e0b;
+  --color-danger: #ef4444;
+  --color-success: #22c55e;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+
+  /* Cores de Raridade */
+  --rarity-common: #94a3b8;
+  --rarity-rare: #3b82f6;
+  --rarity-epic: #a855f7;
+  --rarity-legendary: #f59e0b;
+  --rarity-ssr: #ef4444;
+  --rarity-ur: #ec4899;
+
+  /* Sombras e Brilhos */
+  --shadow-glow-accent: 0 0 15px rgba(99, 102, 241, 0.4);
+  --shadow-glow-ur: 0 0 20px rgba(236, 72, 153, 0.4);
+  --shadow-glow-legendary: 0 0 15px rgba(245, 158, 11, 0.3);
+}
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #1e293b; }
+::-webkit-scrollbar-track { background: var(--color-secondary-bg); }
 ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-accent); }
 
 /* NAV TABS */
 .nav-tab {
   padding: 10px 16px;
   font-size: 14px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--color-text-secondary);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -23,7 +50,7 @@
   font-family: 'Rajdhani', sans-serif;
 }
 .nav-tab:hover { color: #c7d2fe; background: rgba(99,102,241,0.1); }
-.nav-tab.active { color: #818cf8; border-bottom-color: #6366f1; }
+.nav-tab.active { color: var(--color-accent-glow); border-bottom-color: var(--color-accent); }
 
 /* SCREENS */
 .screen { display: none; }
@@ -38,7 +65,7 @@
   letter-spacing: 2px;
   text-transform: uppercase;
   margin-bottom: 16px;
-  background: linear-gradient(to right, #818cf8, #a78bfa);
+  background: linear-gradient(to right, var(--color-accent-glow), #a78bfa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -46,18 +73,18 @@
 
 /* STAT CARDS */
 .stat-card {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--color-secondary-bg);
+  border: 1px solid var(--color-card-bg);
   border-radius: 12px;
   padding: 20px;
   text-align: center;
   transition: transform 0.2s, border-color 0.2s;
 }
-.stat-card:hover { transform: translateY(-2px); border-color: #6366f1; }
+.stat-card:hover { transform: translateY(-2px); border-color: var(--color-accent); }
 
 /* BUTTONS */
 .btn-primary {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--color-accent), #8b5cf6);
   color: white;
   font-weight: 700;
   padding: 10px 24px;
@@ -73,7 +100,7 @@
 .btn-primary:active { transform: translateY(0); }
 
 .btn-secondary {
-  background: #334155;
+  background: var(--color-card-bg);
   color: #c7d2fe;
   font-weight: 600;
   padding: 10px 24px;
@@ -84,10 +111,10 @@
   font-size: 16px;
   transition: all 0.2s;
 }
-.btn-secondary:hover { background: #475569; border-color: #6366f1; }
+.btn-secondary:hover { background: #475569; border-color: var(--color-accent); }
 
 .btn-danger {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, var(--color-danger), #dc2626);
   color: white;
   font-weight: 700;
   padding: 8px 16px;
@@ -101,7 +128,7 @@
 .btn-danger:hover { box-shadow: 0 4px 15px rgba(239,68,68,0.4); }
 
 .btn-success {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
+  background: linear-gradient(135deg, var(--color-success), #16a34a);
   color: white;
   font-weight: 700;
   padding: 8px 16px;
@@ -115,8 +142,8 @@
 
 /* CARD COMPONENT */
 .ninja-card {
-  background: #1e293b;
-  border: 2px solid #334155;
+  background: var(--color-secondary-bg);
+  border: 2px solid var(--color-card-bg);
   border-radius: 12px;
   padding: 12px;
   cursor: pointer;
@@ -125,34 +152,34 @@
   overflow: hidden;
 }
 .ninja-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
-.ninja-card.rarity-Common { border-color: #94a3b8; }
-.ninja-card.rarity-Rare { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.2); }
-.ninja-card.rarity-Epic { border-color: #a855f7; box-shadow: 0 0 10px rgba(168,85,247,0.2); }
-.ninja-card.rarity-Legendary { border-color: #f59e0b; box-shadow: 0 0 15px rgba(245,158,11,0.3); }
-.ninja-card.rarity-SSR { border-color: #ef4444; box-shadow: 0 0 15px rgba(239,68,68,0.3); }
-.ninja-card.rarity-UR { border-color: #ec4899; box-shadow: 0 0 20px rgba(236,72,153,0.4); animation: urGlow 2s ease-in-out infinite; }
+.ninja-card.rarity-Common { border-color: var(--rarity-common); }
+.ninja-card.rarity-Rare { border-color: var(--rarity-rare); box-shadow: 0 0 10px rgba(59,130,246,0.2); }
+.ninja-card.rarity-Epic { border-color: var(--rarity-epic); box-shadow: 0 0 10px rgba(168,85,247,0.2); }
+.ninja-card.rarity-Legendary { border-color: var(--rarity-legendary); box-shadow: var(--shadow-glow-legendary); }
+.ninja-card.rarity-SSR { border-color: var(--rarity-ssr); box-shadow: 0 0 15px rgba(239,68,68,0.3); }
+.ninja-card.rarity-UR { border-color: var(--rarity-ur); box-shadow: var(--shadow-glow-ur); animation: urGlow 2s ease-in-out infinite; }
 
 @keyframes urGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(236,72,153,0.4); }
+  0%, 100% { box-shadow: var(--shadow-glow-ur); }
   50% { box-shadow: 0 0 30px rgba(236,72,153,0.7); }
 }
 
 .ninja-card .card-name { font-weight: 700; font-size: 14px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ninja-card .card-rarity { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
-.ninja-card .card-stats { font-size: 12px; color: #94a3b8; }
+.ninja-card .card-stats { font-size: 12px; color: var(--color-text-secondary); }
 .ninja-card .card-element { position: absolute; top: 8px; right: 8px; font-size: 18px; }
 .ninja-card .card-level { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; }
-.ninja-card .card-stars { color: #f59e0b; font-size: 10px; margin-top: 2px; }
+.ninja-card .card-stars { color: var(--color-gold); font-size: 10px; margin-top: 2px; }
 .ninja-card .card-image { width: 100%; height: 80px; display: flex; align-items: center; justify-content: center; font-size: 48px; margin-bottom: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; }
 
-.ninja-card.selected { border-color: #22c55e !important; box-shadow: 0 0 15px rgba(34,197,94,0.4) !important; }
+.ninja-card.selected { border-color: var(--color-success) !important; box-shadow: 0 0 15px rgba(34,197,94,0.4) !important; }
 
-.rarity-color-Common { color: #94a3b8; }
-.rarity-color-Rare { color: #3b82f6; }
-.rarity-color-Epic { color: #a855f7; }
-.rarity-color-Legendary { color: #f59e0b; }
-.rarity-color-SSR { color: #ef4444; }
-.rarity-color-UR { color: #ec4899; }
+.rarity-color-Common { color: var(--rarity-common); }
+.rarity-color-Rare { color: var(--rarity-rare); }
+.rarity-color-Epic { color: var(--rarity-epic); }
+.rarity-color-Legendary { color: var(--rarity-legendary); }
+.rarity-color-SSR { color: var(--rarity-ssr); }
+.rarity-color-UR { color: var(--rarity-ur); }
 
 /* SQUAD SLOT */
 .squad-slot {
@@ -433,3 +460,439 @@
     background: linear-gradient(90deg, #ef4444, #22c55e);
     transition: width 0.3s ease-out;
 }
+
+/* CARD EQUIPMENT BADGE */
+.card-equip-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(99,102,241,0.85);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #818cf8;
+}
+
+/* FLOATING DAMAGE POPUP */
+.damage-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 60;
+}
+.floating-damage-text {
+  font-size: 24px;
+  font-weight: 900;
+  color: #ef4444;
+  text-shadow: 0 0 10px rgba(239,68,68,0.8), 0 2px 4px rgba(0,0,0,0.9);
+  animation: floatUp 0.6s ease-out forwards;
+}
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0) scale(1.2); }
+  50% { transform: translateY(-20px) scale(1); }
+  100% { opacity: 0; transform: translateY(-35px) scale(0.9); }
+}
+
+/* EQUIP FILTER BUTTONS */
+.equip-filter-btn {
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 8px;
+}
+.equip-filter-btn.active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  color: white !important;
+  border-color: #818cf8 !important;
+}
+
+/* ============================================
+   PHASE 1: CINEMATIC LIGHTING & ATMOSPHERE ENGINE
+   ============================================ */
+
+/* Volumetric Fog & Atmospheric Rays Overlay */
+.volumetric-fog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(circle at 50% 20%, rgba(99,102,241,0.08) 0%, rgba(15,23,42,0) 70%),
+              linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.15) 100%);
+  transition: background 1.5s ease-in-out;
+}
+
+.volumetric-fog-layer {
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.008' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  animation: fogDrift 60s linear infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes fogDrift {
+  0% { transform: scale(1) translate(0, 0); opacity: 0.4; }
+  50% { transform: scale(1.1) translate(-2%, 2%); opacity: 0.7; }
+  100% { transform: scale(1.05) translate(2%, -1%); opacity: 0.5; }
+}
+
+/* Day/Night Cycle Environment Presets */
+body.time-dawn {
+  background: radial-gradient(ellipse at top, #2e1065 0%, #0f172a 70%, #070a12 100%) !important;
+  box-shadow: inset 0 0 100px rgba(245, 158, 11, 0.12);
+}
+body.time-noon {
+  background: radial-gradient(ellipse at top, #1e1b4b 0%, #0f172a 65%, #020617 100%) !important;
+  box-shadow: inset 0 0 120px rgba(99, 102, 241, 0.15);
+}
+body.time-sunset {
+  background: radial-gradient(ellipse at top, #4c0519 0%, #1e1b4b 50%, #070a12 100%) !important;
+  box-shadow: inset 0 0 150px rgba(225, 29, 72, 0.18);
+}
+body.time-midnight {
+  background: radial-gradient(ellipse at top, #020617 0%, #030712 60%, #000000 100%) !important;
+  box-shadow: inset 0 0 180px rgba(168, 85, 247, 0.15);
+}
+
+/* Post-Processing ACES Tonemapping simulation */
+.post-process-aces {
+  filter: contrast(1.08) saturate(1.05) drop-shadow(0 0 1px rgba(0,0,0,0.5));
+  transition: filter 0.8s ease;
+}
+
+/* Light Bloom FX */
+.lumen-emissive-glow {
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.4), inset 0 0 10px rgba(129, 140, 248, 0.2);
+}
+
+/* ============================================
+   PHASE 2: PBR MATERIALS & DŌJUTSU SHADER SUITE
+   ============================================ */
+
+/* PBR Card 3D Parallax & Metallic Specular Highlight */
+.card-pbr-container {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.card-pbr-container:hover {
+  transform: translateY(-6px) rotateX(4deg) rotateY(-4deg);
+}
+
+/* Specular Light Reflection Sweep on Cards */
+.card-pbr-specular {
+  position: relative;
+  overflow: hidden;
+}
+.card-pbr-specular::after {
+  content: '';
+  position: absolute;
+  top: -150%;
+  left: -150%;
+  width: 300%;
+  height: 300%;
+  background: linear-gradient(
+    45deg,
+    transparent 45%,
+    rgba(255, 255, 255, 0.12) 50%,
+    transparent 55%
+  );
+  pointer-events: none;
+  transition: opacity 0.3s;
+  opacity: 0;
+}
+.card-pbr-specular:hover::after {
+  opacity: 1;
+  animation: specularSweep 1.2s ease-out forwards;
+}
+@keyframes specularSweep {
+  0% { transform: translate(-30%, -30%); }
+  100% { transform: translate(30%, 30%); }
+}
+
+/* Dōjutsu Eye Emissive Shaders */
+.dojutsu-sharingan {
+  text-shadow: 0 0 8px #ff0033, 0 0 16px rgba(255, 0, 51, 0.8);
+  animation: dojutsuPulse 2s infinite alternate;
+}
+.dojutsu-rinnegan {
+  text-shadow: 0 0 8px #a855f7, 0 0 16px rgba(168, 85, 247, 0.8);
+  animation: dojutsuPulse 2.5s infinite alternate;
+}
+.dojutsu-byakugan {
+  text-shadow: 0 0 8px #e9d5ff, 0 0 16px rgba(233, 213, 255, 0.8);
+}
+
+@keyframes dojutsuPulse {
+  0% { filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.6)) brightness(1); }
+  100% { filter: drop-shadow(0 0 10px rgba(255, 0, 81, 0.9)) brightness(1.3); }
+}
+
+/* Metallic Equipment PBR Shaders */
+.equipment-card {
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.25s ease;
+}
+.equipment-card:hover {
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border-color: rgba(129, 140, 248, 0.6);
+}
+
+/* ============================================
+   PHASE 4: AAA COMBAT IMPACT & CAMERA SYSTEM
+   ============================================ */
+
+/* Impact Frame Color Inversion Flash */
+.impact-frame-active {
+  animation: impactFlashInvert 0.08s ease-in-out !important;
+}
+@keyframes impactFlashInvert {
+  0% { filter: invert(1) contrast(3) hue-rotate(180deg); }
+  50% { filter: invert(0.9) contrast(2.5) drop-shadow(0 0 30px #ef4444); }
+  100% { filter: none; }
+}
+
+/* Procedural Camera Shake Profiles */
+.shake-light {
+  animation: cameraShakeLight 0.15s ease-in-out;
+}
+.shake-heavy {
+  animation: cameraShakeHeavy 0.3s ease-in-out;
+}
+.shake-ultimate {
+  animation: cameraShakeUltimate 0.5s ease-in-out;
+}
+
+@keyframes cameraShakeLight {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-3px, 2px) rotate(-0.5deg); }
+  50% { transform: translate(3px, -2px) rotate(0.5deg); }
+  75% { transform: translate(-2px, -1px) rotate(0deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes cameraShakeHeavy {
+  0% { transform: translate(0, 0) scale(1); }
+  20% { transform: translate(-8px, 6px) scale(1.02) rotate(-1.5deg); }
+  40% { transform: translate(8px, -6px) scale(1.01) rotate(1.5deg); }
+  60% { transform: translate(-5px, 3px) scale(1) rotate(-1deg); }
+  80% { transform: translate(4px, -2px) scale(1) rotate(0.5deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+}
+
+@keyframes cameraShakeUltimate {
+  0% { transform: scale(1); filter: brightness(1); }
+  15% { transform: translate(-14px, 10px) scale(1.05) rotate(-3deg); filter: brightness(2) contrast(1.5); }
+  30% { transform: translate(14px, -10px) scale(1.04) rotate(3deg); filter: brightness(2.5); }
+  45% { transform: translate(-10px, 8px) scale(1.02) rotate(-2deg); }
+  60% { transform: translate(8px, -5px) scale(1.01) rotate(1deg); }
+  80% { transform: translate(-4px, 3px) scale(1); }
+  100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+}
+
+/* Critical Impact Text */
+.critical-damage-text {
+  font-size: 32px !important;
+  font-weight: 900 !important;
+  color: #f59e0b !important;
+  text-shadow: 0 0 15px #f59e0b, 0 0 30px #ef4444, 0 4px 8px #000000 !important;
+  letter-spacing: 2px;
+}
+
+/* ============================================
+   PHASE 5: NIAGARA VFX SUITE & ELEMENTAL JUTSUS
+   ============================================ */
+
+/* Elemental Jutsu Burst Overlays */
+.vfx-element-overlay {
+  position: absolute;
+  inset: -20px;
+  pointer-events: none;
+  z-index: 45;
+  border-radius: 20px;
+  animation: vfxPulseBurst 0.6s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+@keyframes vfxPulseBurst {
+  0% { transform: scale(0.7); opacity: 1; filter: brightness(2); }
+  50% { transform: scale(1.15); opacity: 0.8; }
+  100% { transform: scale(1.3); opacity: 0; filter: brightness(1); }
+}
+
+/* Katon - Fire Style VFX */
+.vfx-katon {
+  background: radial-gradient(circle, rgba(255,102,0,0.8) 0%, rgba(239,68,68,0.5) 40%, rgba(0,0,0,0) 70%);
+  box-shadow: 0 0 40px #ff6600, inset 0 0 20px #ef4444;
+}
+
+/* Raiton - Lightning Style VFX */
+.vfx-raiton {
+  background: radial-gradient(circle, rgba(0,210,255,0.85) 0%, rgba(168,85,247,0.6) 45%, rgba(0,0,0,0) 70%);
+  box-shadow: 0 0 45px #00d2ff, inset 0 0 25px #a855f7;
+}
+
+/* Suiton - Water Style VFX */
+.vfx-suiton {
+  background: radial-gradient(circle, rgba(0,149,255,0.8) 0%, rgba(6,182,212,0.5) 45%, rgba(0,0,0,0) 70%);
+  box-shadow: 0 0 35px #0095ff, inset 0 0 20px #06b6d4;
+}
+
+/* Fuuton - Wind Style VFX */
+.vfx-fuuton {
+  background: radial-gradient(circle, rgba(16,185,129,0.8) 0%, rgba(167,243,208,0.5) 45%, rgba(0,0,0,0) 70%);
+  box-shadow: 0 0 35px #10b981, inset 0 0 20px #a7f3d0;
+}
+
+/* Doton - Earth Style VFX */
+.vfx-doton {
+  background: radial-gradient(circle, rgba(180,83,9,0.85) 0%, rgba(217,119,6,0.6) 45%, rgba(0,0,0,0) 70%);
+  box-shadow: 0 0 35px #b45309, inset 0 0 20px #d97706;
+}
+
+/* Kawarimi Smoke Replacement Cloud */
+.vfx-kawarimi-smoke {
+  background: radial-gradient(circle, rgba(203,213,225,0.9) 0%, rgba(100,116,139,0.6) 50%, rgba(0,0,0,0) 80%);
+  box-shadow: 0 0 50px rgba(255,255,255,0.6);
+  animation: kawarimiPuff 0.5s ease-out forwards;
+}
+@keyframes kawarimiPuff {
+  0% { transform: scale(0.4); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ============================================
+   PHASE 6: AAA ANIMATIONS, MOTION MATCHING & HAND-SIGNS
+   ============================================ */
+
+/* Breathing Idle Stance Animation */
+.ninja-card {
+  animation: ninjaBreathing 4s ease-in-out infinite alternate;
+}
+@keyframes ninjaBreathing {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.005); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Chakra Charge Aura Pulse */
+.chakra-aura-active {
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.8), 0 0 50px rgba(129, 140, 248, 0.5), inset 0 0 15px rgba(168, 85, 247, 0.4) !important;
+  animation: chakraPulse 1.5s ease-in-out infinite alternate !important;
+}
+@keyframes chakraPulse {
+  0% { filter: drop-shadow(0 0 5px #6366f1) brightness(1); }
+  100% { filter: drop-shadow(0 0 20px #818cf8) brightness(1.2); }
+}
+
+/* Hand-Sign Casting Badge */
+.hand-sign-badge {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(168, 85, 247, 0.9));
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
+  letter-spacing: 0.5px;
+  animation: handSignGlow 1s ease-in-out infinite alternate;
+}
+@keyframes handSignGlow {
+  0% { opacity: 0.8; transform: scale(0.98); }
+  100% { opacity: 1; transform: scale(1.04); }
+}
+
+/* ============================================
+   PHASE 7: GLASSMORPHISM UI/HUD & MICRO-INTERACTIONS
+   ============================================ */
+
+/* Premium Glassmorphism Panels */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.78) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Spring Interactive Glass Buttons */
+.btn-primary, .btn-secondary, .nav-tab {
+  transition: transform 0.2s cubic-bezier(0.17, 0.88, 0.32, 1.28), box-shadow 0.2s ease, background 0.2s ease !important;
+}
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.03) !important;
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5), 0 0 15px rgba(129, 140, 248, 0.4) !important;
+}
+.btn-primary:active {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+/* Glow Borders */
+.glow-border-indigo {
+  border: 1px solid rgba(129, 140, 248, 0.6) !important;
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.3) !important;
+}
+.glow-border-gold {
+  border: 1px solid rgba(245, 158, 11, 0.6) !important;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.3) !important;
+}
+
+/* Glass Modal Overlay */
+.glass-modal-overlay {
+  background: rgba(2, 6, 23, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  animation: modalFadeIn 0.25s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+@keyframes modalFadeIn {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Ninja 2D Avatar Stylings */
+.ninja-avatar-pbr {
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6), 0 4px 10px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+  border-width: 2px !important;
+}
+
+.ninja-card:hover .ninja-avatar-pbr {
+  transform: scale(1.05);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4), 0 6px 15px rgba(99, 102, 241, 0.3);
+}
+
+.shadow-glow-inner {
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.08);
+}
+
+/* Widescreen Cinematic Slow Motion Overlay */
+.battle-arena.cinematic-slowmo {
+  transition: filter 1s ease;
+  filter: sepia(0.2) contrast(1.15) saturate(1.1);
+}
+
+.battle-arena.cinematic-slowmo::before,
+.battle-arena.cinematic-slowmo::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 8%;
+  background: #000;
+  z-index: 100;
+  transition: all 0.5s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+.battle-arena.cinematic-slowmo::before { top: 0; }
+.battle-arena.cinematic-slowmo::after { bottom: 0; }
+
+
+
+
+

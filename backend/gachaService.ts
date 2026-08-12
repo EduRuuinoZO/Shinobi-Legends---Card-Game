@@ -1,6 +1,5 @@
 import { BASE_NINJAS, RARITY_MULTIPLIERS, RARITY_WEIGHTS, getElementMultiplier, applyLevelUp, getXpToNextLevel } from './cardDatabase';
 import { ICard, IUser } from './User';
-import { NINJA_IMAGES } from './cardDatabase';
 
 // ============================================
 // GACHA SERVICE
@@ -23,7 +22,7 @@ export function generateCard(): ICard {
   const atk = Math.floor(base.baseAtk * mult);
   const hp = Math.floor(base.baseHp * mult);
 
-  const image = NINJA_IMAGES[base.name] || '';
+  const image = base.image || '';
 
   return {
     id: `ninja-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -118,9 +117,26 @@ export interface BattleFighter {
   isPlayer: boolean;
 }
 
+export interface TurnEvent {
+  turn: number;
+  attackerId: string;
+  attackerName: string;
+  defenderId: string;
+  defenderName: string;
+  isPlayerAttacking: boolean;
+  attackerElement: string;
+  damage: number;
+  elementMultiplier: number;
+  defenderHpRemaining: number;
+  defenderMaxHp: number;
+  defenderDefeated: boolean;
+  message: string;
+}
+
 export interface BattleResult {
   winner: 'player' | 'enemy';
   log: string[];
+  turns: TurnEvent[];
   playerSurvivors: number;
   enemySurvivors: number;
 }
@@ -130,6 +146,7 @@ export function simulateBattle(
   enemySquad: BattleFighter[]
 ): BattleResult {
   const log: string[] = [];
+  const turns: TurnEvent[] = [];
   let pIdx = 0;
   let eIdx = 0;
 
@@ -145,12 +162,31 @@ export function simulateBattle(
 
     // Player attacks
     const pDmg = calculateDamage(attacker.atk, attacker.element, defender.element, defender.level);
+    const pElemMult = getElementMultiplier(attacker.element, defender.element);
     defender.hp -= pDmg;
-    const elementNote = getElementMultiplier(attacker.element, defender.element) > 1 ? ' 🔥 Element advantage!' :
-                        getElementMultiplier(attacker.element, defender.element) < 1 ? ' 💧 Element disadvantage!' : '';
-    log.push(`Turn ${turn}: ${attacker.name} deals ${pDmg} damage to ${defender.name}${elementNote} (HP: ${Math.max(0, defender.hp)}/${defender.maxHp})`);
+    const elementNote = pElemMult > 1 ? ' 🔥 Element advantage!' :
+                        pElemMult < 1 ? ' 💧 Element disadvantage!' : '';
+    const pMsg = `Turn ${turn}: ${attacker.name} deals ${pDmg} damage to ${defender.name}${elementNote} (HP: ${Math.max(0, defender.hp)}/${defender.maxHp})`;
+    log.push(pMsg);
 
-    if (defender.hp <= 0) {
+    const defenderDefeatedByP = defender.hp <= 0;
+    turns.push({
+      turn,
+      attackerId: attacker.id,
+      attackerName: attacker.name,
+      defenderId: defender.id,
+      defenderName: defender.name,
+      isPlayerAttacking: true,
+      attackerElement: attacker.element,
+      damage: pDmg,
+      elementMultiplier: pElemMult,
+      defenderHpRemaining: Math.max(0, defender.hp),
+      defenderMaxHp: defender.maxHp,
+      defenderDefeated: defenderDefeatedByP,
+      message: pMsg
+    });
+
+    if (defenderDefeatedByP) {
       log.push(`💀 ${defender.name} is defeated!`);
       eIdx++;
       if (eIdx >= enemySquad.length) break;
@@ -160,12 +196,31 @@ export function simulateBattle(
 
     // Enemy attacks
     const eDmg = calculateDamage(defender.atk, defender.element, attacker.element, attacker.level);
+    const eElemMult = getElementMultiplier(defender.element, attacker.element);
     attacker.hp -= eDmg;
-    const eElementNote = getElementMultiplier(defender.element, attacker.element) > 1 ? ' 🔥 Element advantage!' :
-                         getElementMultiplier(defender.element, attacker.element) < 1 ? ' 💧 Element disadvantage!' : '';
-    log.push(`Turn ${turn}: ${defender.name} deals ${eDmg} damage to ${attacker.name}${eElementNote} (HP: ${Math.max(0, attacker.hp)}/${attacker.maxHp})`);
+    const eElementNote = eElemMult > 1 ? ' 🔥 Element advantage!' :
+                         eElemMult < 1 ? ' 💧 Element disadvantage!' : '';
+    const eMsg = `Turn ${turn}: ${defender.name} deals ${eDmg} damage to ${attacker.name}${eElementNote} (HP: ${Math.max(0, attacker.hp)}/${attacker.maxHp})`;
+    log.push(eMsg);
 
-    if (attacker.hp <= 0) {
+    const attackerDefeatedByE = attacker.hp <= 0;
+    turns.push({
+      turn,
+      attackerId: defender.id,
+      attackerName: defender.name,
+      defenderId: attacker.id,
+      defenderName: attacker.name,
+      isPlayerAttacking: false,
+      attackerElement: defender.element,
+      damage: eDmg,
+      elementMultiplier: eElemMult,
+      defenderHpRemaining: Math.max(0, attacker.hp),
+      defenderMaxHp: attacker.maxHp,
+      defenderDefeated: attackerDefeatedByE,
+      message: eMsg
+    });
+
+    if (attackerDefeatedByE) {
       log.push(`💀 ${attacker.name} is defeated!`);
       pIdx++;
       if (pIdx >= playerSquad.length) break;
@@ -180,7 +235,7 @@ export function simulateBattle(
 
   log.push(playerWon ? '🏆 VICTORY! Your squad wins!' : '💔 DEFEAT! The enemy prevails...');
 
-  return { winner, log, playerSurvivors, enemySurvivors };
+  return { winner, log, turns, playerSurvivors, enemySurvivors };
 }
 
 // ============================================

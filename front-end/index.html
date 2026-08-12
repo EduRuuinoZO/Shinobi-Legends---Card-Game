@@ -7,7 +7,7 @@
   <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico" type="image/x-icon">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./estilo.css">
   <script>
     tailwind.config = {
       theme: {
@@ -21,15 +21,44 @@
     }
   </script>
 </head>
-<body class="bg-shinobi-dark text-slate-100 font-ninja min-h-screen">
+<body class="bg-shinobi-dark text-slate-100 font-ninja min-h-screen time-noon">
+
+  <!-- VOLUMETRIC FOG & ATMOSPHERE OVERLAY -->
+  <div class="volumetric-fog-overlay">
+    <div class="volumetric-fog-layer"></div>
+    <canvas id="weatherCanvas" class="fixed inset-0 pointer-events-none z-10 w-full h-full"></canvas>
+  </div>
 
   <!-- TOP NAV BAR -->
   <nav class="fixed top-0 left-0 right-0 z-50 bg-shinobi-mid/95 backdrop-blur-sm border-b border-slate-700 px-4 py-2">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div class="flex items-center gap-3">
         <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent tracking-wider">⚔️ SHINOBI LEGENDS</h1>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-900/80 border border-indigo-500/50 text-indigo-300 font-bold uppercase tracking-wider hidden md:inline-block">Lumen Engine AAA</span>
       </div>
-      <div class="flex items-center gap-4 text-sm">
+      <div class="flex items-center gap-3 text-sm">
+        <!-- Atmospheric Day/Night Switcher -->
+        <div class="flex items-center gap-1.5 bg-slate-900/80 border border-slate-700/80 rounded-lg px-2 py-1 text-xs">
+          <span class="text-amber-400 text-xs">🌅 Lighting:</span>
+          <select id="timeOfDaySelect" onchange="Game.setAtmosphereMode(this.value)" class="bg-transparent text-slate-200 font-semibold focus:outline-none cursor-pointer">
+            <option value="time-dawn">🌄 Dawn (Alvorada)</option>
+            <option value="time-noon" selected>☀️ Noon (Meio-Dia)</option>
+            <option value="time-sunset">🌇 Sunset (Pôr do Sol)</option>
+            <option value="time-midnight">🌕 Midnight (Lua Sangrenta)</option>
+          </select>
+        </div>
+
+        <!-- Weather System Switcher -->
+        <div class="flex items-center gap-1.5 bg-slate-900/80 border border-slate-700/80 rounded-lg px-2 py-1 text-xs">
+          <span class="text-blue-400 text-xs">⛈️ Weather:</span>
+          <select id="weatherSelect" onchange="Game.setWeatherMode(this.value)" class="bg-transparent text-slate-200 font-semibold focus:outline-none cursor-pointer">
+            <option value="clear" selected>🌸 Clear / Sakura</option>
+            <option value="rain">🌧️ Rain (Chuva)</option>
+            <option value="storm">⚡ Storm (Tempestade)</option>
+            <option value="snow">❄️ Snow (Neve)</option>
+          </select>
+        </div>
+
         <span id="navGold" class="text-shinobi-gold font-bold">💰 0G</span>
         <span id="navCards" class="text-slate-400">🃏 0 cards</span>
         <span id="navFloor" class="text-green-400">🏯 Floor 1</span>
@@ -56,7 +85,7 @@
   </div>
 
   <!-- MAIN CONTENT AREA -->
-  <main class="pt-[100px] pb-8 px-4 max-w-7xl mx-auto">
+  <main class="pt-[100px] pb-8 px-4 max-w-7xl mx-auto post-process-aces">
 
     <!-- HOME SCREEN -->
     <section id="screen-home" class="screen active">
@@ -140,17 +169,98 @@
 
     <!-- SQUAD SCREEN -->
     <section id="screen-squad" class="screen">
-      <h2 class="section-title">👥 Squad Builder</h2>
-      <p class="text-slate-400 mb-4">Select up to 5 cards for your battle squad.</p>
-      <div id="squadSlots" class="grid grid-cols-5 gap-4 mb-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+        <div>
+          <h2 class="section-title mb-0">👥 Squad Builder</h2>
+          <p class="text-slate-400 text-sm">Monte a sua equipe de 5 Ninjas para batalhas, PVP e Torre.</p>
+        </div>
+        <!-- Squad Total Power & Stats Badge -->
+        <div class="bg-shinobi-mid border border-amber-500/40 rounded-xl px-4 py-2 flex items-center gap-4 shadow-glow">
+          <div>
+            <div class="text-xs text-slate-400 font-bold uppercase">Poder do Squad</div>
+            <div class="text-xl font-extrabold text-shinobi-gold flex items-center gap-1" id="squadTotalPower">
+              <span>⚡ 0</span>
+            </div>
+          </div>
+          <div class="border-l border-slate-700 pl-4">
+            <div class="text-xs text-slate-400 font-bold uppercase">Ninjas</div>
+            <div class="text-lg font-bold text-indigo-400" id="squadMemberCount">0 / 5</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Squad Slots Display -->
+      <div id="squadSlots" class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         <div class="squad-slot empty">Slot 1</div>
         <div class="squad-slot empty">Slot 2</div>
         <div class="squad-slot empty">Slot 3</div>
         <div class="squad-slot empty">Slot 4</div>
         <div class="squad-slot empty">Slot 5</div>
       </div>
-      <button onclick="Game.saveSquad()" class="btn-primary mb-6">💾 Save Squad</button>
-      <h3 class="text-lg font-bold text-slate-300 mb-3">Available Cards:</h3>
+
+      <!-- Action Buttons Bar -->
+      <div class="flex flex-wrap gap-3 mb-6">
+        <button onclick="Game.saveSquad()" class="btn-primary px-6 py-2.5 font-bold flex items-center gap-2">
+          <span>💾 Salvar Squad</span>
+        </button>
+        <button onclick="Game.autoSquadStrongest()" class="btn-secondary text-amber-400 border-amber-500/50 hover:bg-amber-500/10 px-5 py-2.5 font-bold flex items-center gap-2">
+          <span>⚡ Auto Squad Mais Forte</span>
+        </button>
+        <button onclick="Game.clearSquad()" class="btn-secondary text-slate-400 hover:text-red-400 px-4 py-2.5 text-xs font-semibold">
+          <span>🔄 Limpar Squad</span>
+        </button>
+      </div>
+
+      <!-- Filters & Sorting Toolbar for Squad Cards -->
+      <div class="bg-shinobi-mid rounded-xl p-4 border border-slate-700 mb-6 flex flex-wrap items-center gap-3">
+        <!-- Search Input -->
+        <div class="flex-1 min-w-[200px]">
+          <input type="text" id="squadSearchInput" oninput="Game.renderSquadBuilder()" placeholder="🔍 Buscar ninja pelo nome..." class="w-full bg-shinobi-light border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <!-- Sort Select -->
+        <div>
+          <select id="squadSortBy" onchange="Game.renderSquadBuilder()" class="bg-shinobi-light border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 font-semibold">
+            <option value="power">⚡ Ordenar: Maior Poder / Rank</option>
+            <option value="rarity">🌟 Ordenar: Raridade</option>
+            <option value="atk">⚔️ Ordenar: Maior ATK</option>
+            <option value="hp">❤️ Ordenar: Maior HP</option>
+            <option value="level">⬆️ Ordenar: Maior Level</option>
+            <option value="name">🔤 Ordenar: Nome (A-Z)</option>
+          </select>
+        </div>
+
+        <!-- Element Filter -->
+        <div>
+          <select id="squadFilterElement" onchange="Game.renderSquadBuilder()" class="bg-shinobi-light border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
+            <option value="">Elemento: Todos</option>
+            <option value="Fire">🔥 Fogo</option>
+            <option value="Wind">🌪️ Vento</option>
+            <option value="Lightning">⚡ Trovão</option>
+            <option value="Earth">🌍 Terra</option>
+            <option value="Water">💧 Água</option>
+          </select>
+        </div>
+
+        <!-- Rarity Filter -->
+        <div>
+          <select id="squadFilterRarity" onchange="Game.renderSquadBuilder()" class="bg-shinobi-light border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
+            <option value="">Raridade: Todas</option>
+            <option value="UR">UR (Ultra Raro)</option>
+            <option value="SSR">SSR (Super Special)</option>
+            <option value="Legendary">Lendário</option>
+            <option value="Epic">Épico</option>
+            <option value="Rare">Raro</option>
+            <option value="Common">Comum</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Available Cards Grid -->
+      <div class="mb-2 flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-300">Ninjas Disponíveis na Coleção:</h3>
+        <span id="squadAvailableCount" class="text-xs text-slate-400">0 Ninjas</span>
+      </div>
       <div id="squadAvailable" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
     </section>
 
@@ -180,24 +290,62 @@
 
     <!-- TOWER SCREEN -->
     <section id="screen-tower" class="screen">
-      <h2 class="section-title">🏯 Ninja Tower</h2>
+      <h2 class="section-title">🏯 Ninja Tower (50 Floors)</h2>
+
+      <!-- Tower Progress & Stats Bar -->
       <div class="bg-shinobi-mid rounded-xl p-6 border border-slate-700 mb-6">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
           <div>
-            <div class="text-2xl font-bold text-indigo-400">Floor <span id="towerFloor">1</span></div>
-            <div class="text-slate-400" id="towerDifficulty">Difficulty: Common/Rare</div>
+            <div class="text-3xl font-extrabold text-indigo-400 flex items-center gap-2">
+              <span>🏯 Floor <span id="towerFloor">1</span> / 50</span>
+              <span id="towerMilestoneBadge" class="hidden text-xs bg-amber-500/20 text-amber-400 border border-amber-500/40 px-2 py-1 rounded-full font-semibold animate-pulse">👑 Milestone Boss Floor</span>
+            </div>
+            <div class="text-slate-400 text-sm mt-1" id="towerDifficulty">Difficulty: Common/Rare</div>
           </div>
-          <div class="text-right">
-            <div class="text-shinobi-gold font-bold" id="towerGoldReward">Reward: 75G</div>
-            <div class="text-green-400" id="towerXpReward">XP: 30</div>
-            <div class="text-purple-400" id="towerEqReward"></div>
+          <div class="flex items-center gap-6 bg-slate-900/60 px-4 py-2 rounded-lg border border-slate-700/50">
+            <div class="text-center">
+              <div class="text-xs text-slate-400">Gold Reward</div>
+              <div class="text-lg font-bold text-shinobi-gold" id="towerGoldReward">75G</div>
+            </div>
+            <div class="text-center border-l border-slate-700 pl-4">
+              <div class="text-xs text-slate-400">XP Reward</div>
+              <div class="text-lg font-bold text-green-400" id="towerXpReward">30 XP</div>
+            </div>
+            <div class="text-center border-l border-slate-700 pl-4">
+              <div class="text-xs text-slate-400">Milestone Equipment</div>
+              <div class="text-sm font-bold text-purple-400" id="towerEqReward">None</div>
+            </div>
           </div>
         </div>
-        <div id="towerEnemies" class="mb-4"></div>
-        <div class="flex gap-4">
-          <button onclick="Game.fightTower()" class="btn-primary flex-1">⚔️ Fight Floor</button>
-          <button onclick="Game.resetTower()" id="towerResetBtn" class="btn-secondary">🔄 Reset Tower</button>
+
+        <!-- Tower Progress Bar -->
+        <div class="w-full bg-slate-900 rounded-full h-3 mb-6 border border-slate-700 overflow-hidden">
+          <div id="towerProgressBar" class="bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-500 h-full transition-all duration-500" style="width: 2%"></div>
         </div>
+
+        <!-- Enemy Squad Preview -->
+        <div class="mb-6">
+          <h3 class="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
+            <span>👹 Floor Guardians:</span>
+          </h3>
+          <div id="towerEnemies" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-4">
+          <button onclick="Game.fightTower()" class="btn-primary flex-1 py-3 text-lg font-bold shadow-lg">⚔️ Fight Floor</button>
+          <button onclick="Game.toggleTowerRoadmap()" class="btn-secondary px-6">📜 50 Floors Roadmap</button>
+          <button onclick="Game.resetTower()" id="towerResetBtn" class="btn-secondary px-6">🔄 Reset Tower (24h)</button>
+        </div>
+      </div>
+
+      <!-- Tower 50-Floor Roadmap Collapsible -->
+      <div id="towerRoadmapContainer" class="bg-shinobi-mid rounded-xl p-6 border border-slate-700 hidden">
+        <h3 class="text-lg font-bold text-slate-200 mb-4 flex items-center justify-between">
+          <span>🗺️ 50-Floor Tower Roadmap</span>
+          <span class="text-xs font-normal text-slate-400">Milestones every 5 floors (Rare/Legendary Equipment)</span>
+        </h3>
+        <div id="towerRoadmapList" class="grid grid-cols-2 sm:grid-cols-5 md:grid-cols-10 gap-2 max-h-96 overflow-y-auto pr-2"></div>
       </div>
     </section>
 
@@ -205,10 +353,14 @@
     <section id="screen-pvp" class="screen">
       <h2 class="section-title">🆚 PVP Arena</h2>
       <div class="bg-shinobi-mid rounded-xl p-6 border border-slate-700 mb-6">
-        <div class="grid grid-cols-3 gap-4 mb-6 text-center">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-center">
           <div>
             <div class="text-2xl font-bold text-purple-400" id="pvpPoints">0</div>
             <div class="text-slate-400 text-sm">PVP Points</div>
+          </div>
+          <div>
+            <div class="text-2xl font-bold text-amber-400" id="pvpTier">Genin 🥉</div>
+            <div class="text-slate-400 text-sm">Rank Tier</div>
           </div>
           <div>
             <div class="text-2xl font-bold text-green-400" id="pvpWins">0</div>
@@ -219,25 +371,98 @@
             <div class="text-slate-400 text-sm">Losses</div>
           </div>
         </div>
-        <div class="flex gap-3">
-          <input type="text" id="pvpTarget" placeholder="Enter opponent username..." class="flex-1 bg-shinobi-light border border-slate-600 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none">
-          <button onclick="Game.challengePvp()" class="btn-primary px-8">⚔️ Challenge!</button>
+
+        <div class="mb-6">
+          <label class="text-sm font-bold text-slate-300 mb-2 block">Direct Challenge by Username:</label>
+          <div class="flex gap-3">
+            <input type="text" id="pvpTarget" placeholder="Enter opponent username..." class="flex-1 bg-shinobi-light border border-slate-600 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none">
+            <button onclick="Game.challengePvp()" class="btn-primary px-8">⚔️ Challenge!</button>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-bold text-slate-300 mb-3">Available Rivals & Opponents:</h3>
+          <div id="pvpOpponentsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </div>
       </div>
     </section>
 
-    <!-- EQUIPMENT SCREEN -->
+    <!-- EQUIPMENT & FORGE SCREEN -->
     <section id="screen-equipment" class="screen">
-      <h2 class="section-title">🛡️ Equipment</h2>
-      <div class="mb-6">
-        <h3 class="text-lg font-bold text-slate-300 mb-3">Unequipped Items:</h3>
-        <div id="equipmentList" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
-        <div id="noEquipment" class="text-slate-500 text-center py-8 hidden">No equipment yet. Conquer tower floors to earn equipment!</div>
+      <h2 class="section-title">🔨 Ninja Forge & 🛡️ Equipment Station</h2>
+
+      <!-- Forge Mode Navigation Tabs -->
+      <div class="flex border-b border-slate-700 mb-6 gap-2">
+        <button onclick="Game.setForgeTab('upgrade')" id="forgeTabUpgrade" class="px-6 py-3 font-bold border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2">
+          <span>🔨 Upgrade Station</span>
+        </button>
+        <button onclick="Game.setForgeTab('fusion')" id="forgeTabFusion" class="px-6 py-3 font-bold text-slate-400 hover:text-slate-200 flex items-center gap-2">
+          <span>✨ Item Fusion (Evolve)</span>
+        </button>
+        <button onclick="Game.setForgeTab('manage')" id="forgeTabManage" class="px-6 py-3 font-bold text-slate-400 hover:text-slate-200 flex items-center gap-2">
+          <span>👤 Equip on Ninjas</span>
+        </button>
       </div>
-      <div>
-        <h3 class="text-lg font-bold text-slate-300 mb-3">Equip on Card:</h3>
-        <select id="equipCardSelect" class="bg-shinobi-light border border-slate-600 rounded-lg px-4 py-2 text-slate-100 mb-4 w-full max-w-md">
-          <option value="">Select a card to equip...</option>
+
+      <!-- Slot Type Filters -->
+      <div class="flex flex-wrap gap-2 mb-6">
+        <button onclick="Game.filterEquipmentType('')" class="btn-secondary equip-filter-btn active" data-type="">All</button>
+        <button onclick="Game.filterEquipmentType('Weapon')" class="btn-secondary equip-filter-btn" data-type="Weapon">⚔️ Weapon</button>
+        <button onclick="Game.filterEquipmentType('Armor')" class="btn-secondary equip-filter-btn" data-type="Armor">🛡️ Armor</button>
+        <button onclick="Game.filterEquipmentType('Helmet')" class="btn-secondary equip-filter-btn" data-type="Helmet">⛑️ Helmet</button>
+        <button onclick="Game.filterEquipmentType('Boots')" class="btn-secondary equip-filter-btn" data-type="Boots">👢 Boots</button>
+        <button onclick="Game.filterEquipmentType('Scroll')" class="btn-secondary equip-filter-btn" data-type="Scroll">📜 Scroll</button>
+        <button onclick="Game.filterEquipmentType('Ring')" class="btn-secondary equip-filter-btn" data-type="Ring">💍 Ring</button>
+      </div>
+
+      <!-- UPGRADE WORKBENCH (FORGE PANEL) -->
+      <div id="forgeWorkbench" class="bg-shinobi-mid border-2 border-indigo-500/50 rounded-xl p-6 mb-6 shadow-glow hidden">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-3">
+          <h3 class="text-xl font-extrabold text-amber-400 flex items-center gap-2">
+            <span>🔥 Anvil of the Hidden Leaf</span>
+          </h3>
+          <button onclick="Game.deselectEquipment()" class="text-slate-400 hover:text-white text-xs px-3 py-1 bg-slate-800 rounded border border-slate-700">✖ Deselect</button>
+        </div>
+        <div id="forgeDetailsContent"></div>
+      </div>
+
+      <!-- FUSION WORKBENCH PANEL -->
+      <div id="fusionWorkbench" class="bg-shinobi-mid border-2 border-purple-500/50 rounded-xl p-6 mb-6 shadow-glow hidden">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-3">
+          <h3 class="text-xl font-extrabold text-purple-400 flex items-center gap-2">
+            <span>✨ Item Fusion & Ascension Chamber</span>
+          </h3>
+          <span class="text-xs text-slate-400">Combine 2 identical rarity & type items ➔ Evolve Rarity!</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center text-center mb-6">
+          <!-- Item 1 Slot -->
+          <div id="fusionSlot1" class="bg-shinobi-dark border-2 border-dashed border-purple-500/40 rounded-xl p-4 min-h-[120px] flex flex-col items-center justify-center">
+            <span class="text-slate-500 text-sm">Select Primary Item</span>
+          </div>
+          <div class="text-2xl font-bold text-purple-400">+</div>
+          <!-- Item 2 Slot -->
+          <div id="fusionSlot2" class="bg-shinobi-dark border-2 border-dashed border-purple-500/40 rounded-xl p-4 min-h-[120px] flex flex-col items-center justify-center">
+            <span class="text-slate-500 text-sm">Select Secondary Duplicate</span>
+          </div>
+        </div>
+        <div id="fusionActionArea" class="text-center"></div>
+      </div>
+
+      <!-- EQUIPMENT INVENTORY SECTION -->
+      <div id="equipmentInventorySection" class="mb-6">
+        <h3 class="text-lg font-bold text-slate-300 mb-3 flex items-center justify-between">
+          <span>📦 Equipment Inventory:</span>
+          <span id="equipmentCountBadge" class="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">0 Items</span>
+        </h3>
+        <div id="equipmentList" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
+        <div id="noEquipment" class="text-slate-500 text-center py-8 hidden">No equipment found in inventory. Complete Tower floors to obtain equipment!</div>
+      </div>
+
+      <!-- NINJA EQUIP MANAGEMENT SECTION -->
+      <div id="ninjaEquipSection" class="hidden">
+        <h3 class="text-lg font-bold text-slate-300 mb-3">Equip Items on Ninja Cards:</h3>
+        <select id="equipCardSelect" class="bg-shinobi-light border border-slate-600 rounded-lg px-4 py-3 text-slate-100 mb-4 w-full max-w-md focus:outline-none focus:border-indigo-500">
+          <option value="">Select a card to manage equipment...</option>
         </select>
         <div id="equipCardSlots" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
       </div>
@@ -274,7 +499,14 @@
     <div class="battle-arena">
       <div id="battleBackground" class="battle-bg"></div>
       <div class="battle-content">
-        <div id="battleLocationName" class="text-center text-lg font-bold text-white/80 mb-2 tracking-wider"></div>
+        <div class="flex justify-between items-center mb-2">
+          <div id="battleLocationName" class="text-lg font-bold text-white/90 tracking-wider"></div>
+          <div class="flex gap-2">
+            <button onclick="Game.setBattleSpeed(1)" id="speed1xBtn" class="btn-secondary text-xs px-3 py-1 active-speed">1x</button>
+            <button onclick="Game.setBattleSpeed(2)" id="speed2xBtn" class="btn-secondary text-xs px-3 py-1">2x</button>
+            <button onclick="Game.skipBattleAnimation()" class="btn-secondary text-xs px-3 py-1">⏭️ Skip</button>
+          </div>
+        </div>
         <div class="battle-teams">
           <div id="battlePlayerSide" class="battle-side player-side"></div>
           <div class="battle-vs">VS</div>

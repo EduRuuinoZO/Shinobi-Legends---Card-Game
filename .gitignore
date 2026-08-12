@@ -16,7 +16,9 @@ bootstrap/cache/
 # Sistema
 .DS_Store
 Thumbs.db
+*.stackdump
 
 # IDEs
 .vscode/
 .idea/
+ShinobiArena

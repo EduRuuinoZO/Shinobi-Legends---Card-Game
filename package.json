@@ -1,0 +1,11 @@
+{
+  "name": "shinobi-legends",
+  "version": "1.0.0",
+  "description": "Shinobi Legends Root Package",
+  "scripts": {
+    "dev": "npm --prefix backend run dev",
+    "start": "npm --prefix backend run dev",
+    "backend": "npm --prefix backend run dev",
+    "typecheck": "npm --prefix backend run typecheck"
+  }
+}

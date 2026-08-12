@@ -2,9 +2,7 @@
 // SHINOBI LEGENDS - GAME ENGINE
 // ============================================
 
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:3000'
-  : '';
+const API_BASE = window.location.origin;
 
 const USERNAME = 'EduardoNinja123';
 
@@ -33,7 +31,13 @@ const state = {
   pvpLosses: 0,
   selectedSquad: [],
   currentScreen: 'home',
-  selectedEquipmentId: null
+  selectedEquipmentId: null,
+  filterEquipType: '',
+  battleSpeed: 1,
+  skipBattle: false,
+  forgeTab: 'upgrade',
+  fusionSlot1: null,
+  fusionSlot2: null
 };
 
 // ============================================
@@ -95,31 +99,68 @@ function showToast(message, type) {
 function renderCardHTML(card, options) {
   if (card == null) return '';
   var opts = options || {};
-  var elementIcon = ELEMENTO_ICONS[card.element] || '❓';
+  var elementIcon = ELEMENT_ICONS[card.element] || '❓';
   var rankInfo = getRankInfo(card.evolutionPoints);
   var starsStr = card.stars > 0 ? '⭐'.repeat(Math.min(card.stars, 7)) : 'None';
   var selectedClass = opts.selected ? ' selected' : '';
-  var clickAction = ops.onClick || '';
+  var clickAction = opts.onClick || '';
   var awakenedBadge = card.awakened 
    ? '<div class="text-xs text-pink-400 font-bold mt-1">✨ AWAKENED ✨</div>'
     : '';
   
-  var cardImage = card.image 
-  ? '<img src="' + card.image + '" alt="' + card.name + '" class="w-16 h-16 object-cover rounded-lg mx-auto" onerror="this.style.display=\'none\'">' 
-  : '<div class="text-4xl text-center">' + getNinjaEmoji(card.name) + '</div>';
-
-  return '<div class="ninja-card rarity-' + card.rarity + selectedClass + '" onclick="' + clickAction + '" title="' + card.name + '">' +
-    '<div class="card-level">Lv.' + card.level + '</div>' +
-    '<div class="card-element">' + elementIcon + '</div>' +
-    '<div class="card-image">' + cardImage + '</div>' +
-    '<div class="card-name">' + card.name + '</div>' +
-    '<div class="card-rarity rarity-color-' + card.rarity + '">' + card.rarity + ' ' + rankInfo.symbol + '</div>' +
-    awakenedBadge + 
-    '<div class="card-stats">⚔️ ' + card.atk + ' | ❤️ ' + card.maxHp + '/' + card.maxHp + '</div>' +
-    (starsStr ? '<div class="card-stars">' + starsStr + '</div>' : '') + 
-    (opts.extra || '') +
-    '</div>';
+  // Dōjutsu Shader Detector
+  var dojutsuClass = '';
+  var nameLower = (card.name || '').toLowerCase();
+  if (nameLower.indexOf('sasuke') !== -1 || nameLower.indexOf('itachi') !== -1 || nameLower.indexOf('madara') !== -1) {
+    dojutsuClass = ' dojutsu-sharingan';
+  } else if (nameLower.indexOf('pain') !== -1 || nameLower.indexOf('nagato') !== -1) {
+    dojutsuClass = ' dojutsu-rinnegan';
+  } else if (nameLower.indexOf('hinata') !== -1 || nameLower.indexOf('neji') !== -1) {
+    dojutsuClass = ' dojutsu-byakugan';
   }
+
+  var cardImage = '';
+  if (card.image) {
+    cardImage = '<img src="' + card.image + '" alt="' + card.name + '" class="w-16 h-16 object-cover rounded-lg mx-auto' + dojutsuClass + '" onerror="this.style.display=\'none\'">';
+  } else {
+    var element = card.element || 'Fire';
+    var gradients = {
+      Fire: 'from-orange-600/30 to-red-900/40 border-red-500/50 text-orange-400',
+      Wind: 'from-emerald-600/30 to-teal-900/40 border-emerald-500/50 text-emerald-400',
+      Lightning: 'from-amber-500/30 to-indigo-900/40 border-purple-500/50 text-yellow-300',
+      Earth: 'from-amber-800/30 to-stone-900/40 border-amber-700/50 text-amber-500',
+      Water: 'from-blue-600/30 to-sky-950/40 border-blue-500/50 text-blue-400'
+    };
+    var gradientClass = gradients[element] || 'from-indigo-600/30 to-slate-900/40 border-indigo-500/50 text-slate-300';
+    var emoji = getNinjaEmoji(card.name);
+    cardImage = '<div class="ninja-avatar-pbr relative w-16 h-16 rounded-full mx-auto flex items-center justify-center border bg-gradient-to-b ' + gradientClass + ' ' + dojutsuClass + ' shadow-glow-inner">' +
+                  '<span class="text-3xl filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">' + emoji + '</span>' +
+                  '<div class="absolute inset-0 rounded-full bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none"></div>' +
+                '</div>';
+  }
+
+  var eqCount = 0;
+  if (card.equipment) {
+    var slots = ['Weapon', 'Armor', 'Helmet', 'Boots', 'Scroll', 'Ring'];
+    slots.forEach(function(s) { if (card.equipment[s] != null) eqCount++; });
+  }
+  var eqBadge = eqCount > 0 ? '<div class="card-equip-badge" title="' + eqCount + ' equipment slots equipped">🛡️ ' + eqCount + '/6</div>' : '';
+
+  return '<div class="card-pbr-container card-pbr-specular inline-block w-full">' +
+    '<div class="ninja-card rarity-' + card.rarity + selectedClass + '" onclick="' + clickAction + '" title="' + card.name + '">' +
+      '<div class="card-level">Lv.' + card.level + '</div>' +
+      '<div class="card-element">' + elementIcon + '</div>' +
+      eqBadge +
+      '<div class="card-image">' + cardImage + '</div>' +
+      '<div class="card-name">' + card.name + '</div>' +
+      '<div class="card-rarity rarity-color-' + card.rarity + '">' + card.rarity + ' ' + rankInfo.symbol + '</div>' +
+      awakenedBadge + 
+      '<div class="card-stats">⚔️ ' + card.atk + ' | ❤️ ' + card.maxHp + '/' + card.maxHp + '</div>' +
+      (starsStr ? '<div class="card-stars">' + starsStr + '</div>' : '') + 
+      (opts.extra || '') +
+    '</div>' +
+  '</div>';
+}
 
 function renderEquipmentHTML(eq, options) {
   if (eq == null) return '';
@@ -434,52 +475,128 @@ async function sellCard(cardId) {
 }
 
 // ============================================
-// SQUAD BUILDER
+// SQUAD BUILDER SYSTEM
 // ============================================
 
+function getCardTotalPower(card) {
+  if (!card) return 0;
+  var totalAtk = card.atk || 0;
+  var totalHp = card.hp || 0;
+  if (card.equipment) {
+    var slots = ['Weapon', 'Armor', 'Helmet', 'Boots', 'Scroll', 'Ring'];
+    slots.forEach(function(s) {
+      if (card.equipment[s]) {
+        totalAtk += card.equipment[s].atkBonus || 0;
+        totalHp += card.equipment[s].hpBonus || 0;
+      }
+    });
+  }
+  return totalAtk + Math.floor(totalHp / 5);
+}
+
 function renderSquadBuilder() {
-  if (state.selectedSquad.length === 0) {
+  if (state.selectedSquad.length === 0 && state.squad && state.squad.length > 0) {
     state.selectedSquad = state.squad.slice();
   }
-  
+
+  // Calculate Total Squad Power
+  var totalPower = 0;
+  var squadCards = [];
+
   var slotsContainer = document.getElementById('squadSlots');
   if (slotsContainer) {
     var slotsHTML = '';
     for (var i = 0; i < 5; i++) {
       var cardId = state.selectedSquad[i];
       var card = cardId
-      ? state.inventory.find(function(c) { return c != null && c.id === cardId; })
-      : null;
+        ? state.inventory.find(function(c) { return c != null && c.id === cardId; })
+        : null;
 
       if (card) {
-        slotsHTML += '<div class="squad-slot filled" onclick="Game.removeFromSquad(' + i + ')">' +
-         '<div class="text-center">' + 
-           '<div class="text-2x1">' + getNinjaEmoji(card.name) + '</div>' +
-           '<div class="text-xs font-bold mt-1">' + card.name + '</div>' +
-           '<div class="text-xs text-slate-400">Lv.' + card.level + ' ' + card.atk + '</div>' + 
-           '<div class="text-xs text-red-400 mt-1">Clique para remover</div>' +
-           '</div></div>';
+        squadCards.push(card);
+        var power = getCardTotalPower(card);
+        totalPower += power;
+
+        var miniAvatar = '';
+        if (card.image) {
+          miniAvatar = '<img src="' + card.image + '" alt="' + card.name + '" class="w-12 h-12 object-cover rounded-full mx-auto border-2 border-indigo-500/50 mb-1">';
+        } else {
+          var element = card.element || 'Fire';
+          var gradients = {
+            Fire: 'from-orange-600/30 to-red-900/40 border-red-500/50 text-orange-400',
+            Wind: 'from-emerald-600/30 to-teal-900/40 border-emerald-500/50 text-emerald-400',
+            Lightning: 'from-amber-500/30 to-indigo-900/40 border-purple-500/50 text-yellow-300',
+            Earth: 'from-amber-800/30 to-stone-900/40 border-amber-700/50 text-amber-500',
+            Water: 'from-blue-600/30 to-sky-950/40 border-blue-500/50 text-blue-400'
+          };
+          var gradientClass = gradients[element] || 'from-indigo-600/30 to-slate-900/40 border-indigo-500/50 text-slate-300';
+          miniAvatar = '<div class="ninja-avatar-pbr relative w-12 h-12 rounded-full mx-auto flex items-center justify-center border bg-gradient-to-b ' + gradientClass + ' shadow-glow-inner mb-1">' +
+                         '<span class="text-2xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">' + getNinjaEmoji(card.name) + '</span>' +
+                       '</div>';
+        }
+
+        slotsHTML += '<div class="squad-slot filled p-3 rounded-xl border border-indigo-500/60 bg-indigo-950/40 cursor-pointer hover:border-red-400 transition-all flex flex-col items-center justify-between" onclick="Game.removeFromSquad(' + i + ')">' +
+          miniAvatar +
+          '<div class="text-xs font-bold text-slate-100 text-center truncate w-full mb-1">' + card.name + '</div>' +
+          '<div class="text-[10px] rarity-color-' + card.rarity + ' font-semibold">Lv.' + card.level + ' ' + card.rarity + '</div>' +
+          '<div class="text-xs text-shinobi-gold font-bold font-mono my-1">⚡ ' + power + '</div>' +
+          '<div class="text-[10px] text-red-400 font-semibold underline mt-1">Remover</div>' +
+        '</div>';
       } else {
-        slotsHTML += '<div class="squad-slot empty">' +
-          '<div class="text-slate-500 text-xs text-center">Slot ' + (i + 1) + '<br>Vazio</div>' +
+        slotsHTML += '<div class="squad-slot empty bg-shinobi-mid/40 border-2 border-dashed border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center min-h-[120px]">' +
+          '<div class="text-slate-500 text-xs font-bold text-center">Slot ' + (i + 1) + '<br><span class="text-[10px] font-normal opacity-60">+ Selecionar</span></div>' +
         '</div>';
       }
     }
     slotsContainer.innerHTML = slotsHTML;
   }
-    
+
+  // Update Squad Header Badges
+  var powerBadge = document.getElementById('squadTotalPower');
+  if (powerBadge) powerBadge.innerHTML = '<span>⚡ ' + totalPower + '</span>';
+
+  var countBadge = document.getElementById('squadMemberCount');
+  if (countBadge) countBadge.textContent = state.selectedSquad.length + ' / 5';
+
+  // Filters & Sorting for Available Inventory Cards
+  var searchVal = document.getElementById('squadSearchInput') ? document.getElementById('squadSearchInput').value.toLowerCase().trim() : '';
+  var sortBy = document.getElementById('squadSortBy') ? document.getElementById('squadSortBy').value : 'power';
+  var elemFilter = document.getElementById('squadFilterElement') ? document.getElementById('squadFilterElement').value : '';
+  var rarityFilter = document.getElementById('squadFilterRarity') ? document.getElementById('squadFilterRarity').value : '';
+
   var available = state.inventory.filter(function(c) {
-    return c != null && state.selectedSquad.indexOf(c.id) === -1;
+    if (c == null) return false;
+    if (state.selectedSquad.indexOf(c.id) !== -1) return false;
+    if (searchVal && c.name.toLowerCase().indexOf(searchVal) === -1) return false;
+    if (elemFilter && c.element !== elemFilter) return false;
+    if (rarityFilter && c.rarity !== rarityFilter) return false;
+    return true;
   });
+
+  // Sort Available Cards
+  available.sort(function(a, b) {
+    if (sortBy === 'power') return getCardTotalPower(b) - getCardTotalPower(a);
+    if (sortBy === 'rarity') return (RARITY_ORDER[b.rarity] || 0) - (RARITY_ORDER[a.rarity] || 0);
+    if (sortBy === 'atk') return b.atk - a.atk;
+    if (sortBy === 'hp') return b.hp - a.hp;
+    if (sortBy === 'level') return b.level - a.level;
+    if (sortBy === 'name') return a.name.localeCompare(b.name);
+    return 0;
+  });
+
+  var countAvailableEl = document.getElementById('squadAvailableCount');
+  if (countAvailableEl) countAvailableEl.textContent = available.length + ' Ninjas';
 
   var availContainer = document.getElementById('squadAvailable');
   if (availContainer) {
     if (available.length === 0) {
-      availContainer.innerHTML = '<div class="text-slate-500 col-span-5 text-center py-8">Nenhuma carta disponível. Abra packs primeiro!</div>';
+      availContainer.innerHTML = '<div class="text-slate-500 col-span-5 text-center py-8">Nenhum ninja encontrado com os filtros selecionados.</div>';
     } else {
       availContainer.innerHTML = available.map(function(card) {
+        var pwr = getCardTotalPower(card);
         return renderCardHTML(card, {
-          onClick: "Game.addToSquad(&quot;" + card.id + "&quot;)"
+          onClick: "Game.addToSquad(&quot;" + card.id + "&quot;)",
+          extra: '<div class="mt-1 text-center"><span class="text-shinobi-gold font-bold text-xs">⚡ Poder: ' + pwr + '</span></div>'
         });
       }).join('');
     }
@@ -487,8 +604,8 @@ function renderSquadBuilder() {
 }
 
 function addToSquad(cardId) {
-  if (state.selectedSquad.length >= 5) { showToast('Squad is full (max 5)!', 'error'); return; }
-  if (state.selectedSquad.indexOf(cardId) !== -1) { showToast('Card already in squad!', 'error'); return; }
+  if (state.selectedSquad.length >= 5) { showToast('Squad cheio (máximo 5 ninjas)!', 'error'); return; }
+  if (state.selectedSquad.indexOf(cardId) !== -1) { showToast('Ninja já está no squad!', 'error'); return; }
   state.selectedSquad.push(cardId);
   renderSquadBuilder();
 }
@@ -496,6 +613,29 @@ function addToSquad(cardId) {
 function removeFromSquad(index) {
   state.selectedSquad.splice(index, 1);
   renderSquadBuilder();
+}
+
+function autoSquadStrongest() {
+  var validCards = state.inventory.filter(function(c) { return c != null; });
+  if (validCards.length === 0) {
+    showToast('Você não possui ninjas no inventário!', 'error');
+    return;
+  }
+
+  validCards.sort(function(a, b) {
+    return getCardTotalPower(b) - getCardTotalPower(a);
+  });
+
+  var top5 = validCards.slice(0, 5);
+  state.selectedSquad = top5.map(function(c) { return c.id; });
+  renderSquadBuilder();
+  showToast('⚡ Squad automático mais forte montado com sucesso!', 'success');
+}
+
+function clearSquad() {
+  state.selectedSquad = [];
+  renderSquadBuilder();
+  showToast('Squad limpo.', 'info');
 }
 
 async function saveSquad() {
@@ -518,7 +658,27 @@ async function saveSquad() {
 // BATTLE VISUAL SYSTEM
 // ============================================
 
-function openBattleModal(battleData) {
+function setBattleSpeed(speed) {
+  state.battleSpeed = speed;
+  var btn1 = document.getElementById('speed1xBtn');
+  var btn2 = document.getElementById('speed2xBtn');
+  if (btn1 && btn2) {
+    if (speed === 1) {
+      btn1.classList.add('btn-primary'); btn1.classList.remove('btn-secondary');
+      btn2.classList.add('btn-secondary'); btn2.classList.remove('btn-primary');
+    } else {
+      btn2.classList.add('btn-primary'); btn2.classList.remove('btn-secondary');
+      btn1.classList.add('btn-secondary'); btn1.classList.remove('btn-primary');
+    }
+  }
+}
+
+function skipBattleAnimation() {
+  state.skipBattle = true;
+}
+
+async function openBattleModal(battleData) {
+  state.skipBattle = false;
   var modal = document.getElementById('battleModal');
   if (!modal) return;
   modal.classList.remove('hidden');
@@ -543,14 +703,19 @@ function openBattleModal(battleData) {
   if (playerSide) {
     playerSide.innerHTML = '<div class="text-center text-sm font-bold text-green-400 mb-2">YOUR SQUAD</div>' +
       playerSquad.map(function(c, i) {
-        return '<div class="battle-fighter" id="player-fighter-' + i + '">' +
+        var hp = c.effectiveStats ? c.effectiveStats.hp : c.hp;
+        var maxHp = c.effectiveStats ? c.effectiveStats.maxHp : c.maxHp;
+        var atk = c.effectiveStats ? c.effectiveStats.atk : c.atk;
+        var idVal = c.id || ('p-' + i);
+        return '<div class="battle-fighter relative" id="fighter-' + idVal + '" data-fighter-id="' + idVal + '">' +
           '<div class="flex items-center gap-2">' +
-            '<span class="text-xl">' + getNinjaEmoji(c.name) + '</span>' +
+            '<span class="text-2xl">' + getNinjaEmoji(c.name) + '</span>' +
             '<div><div class="fighter-name">' + c.name + '</div>' +
-            '<div class="text-xs text-slate-400">Lv.' + c.level + ' ' + (ELEMENT_ICONS[c.element] || '') + ' ⚔️' + (c.effectiveStats ? c.effectiveStats.atk : c.atk) + '</div></div>' +
+            '<div class="text-xs text-slate-400">Lv.' + c.level + ' ' + (ELEMENT_ICONS[c.element] || '') + ' ⚔️' + atk + '</div></div>' +
           '</div>' +
-          '<div class="hp-bar-container"><div class="hp-bar" id="player-hp-' + i + '" style="width:100%"></div></div>' +
-          '<div class="text-xs text-slate-400 mt-1" id="player-hp-text-' + i + '">' + (c.effectiveStats ? c.effectiveStats.hp : c.hp) + '/' + (c.effectiveStats ? c.effectiveStats.maxHp : c.maxHp) + '</div>' +
+          '<div class="hp-bar-container"><div class="hp-bar" id="hp-bar-' + idVal + '" style="width:100%"></div></div>' +
+          '<div class="text-xs text-slate-400 mt-1" id="hp-text-' + idVal + '">' + hp + '/' + maxHp + '</div>' +
+          '<div class="damage-overlay" id="dmg-overlay-' + idVal + '"></div>' +
         '</div>';
       }).join('');
   }
@@ -558,19 +723,21 @@ function openBattleModal(battleData) {
   if (enemySide) {
     enemySide.innerHTML = '<div class="text-center text-sm font-bold text-red-400 mb-2">ENEMY SQUAD</div>' +
       enemySquad.map(function(c, i) {
-        return '<div class="battle-fighter" id="enemy-fighter-' + i + '">' +
+        var idVal = c.id || ('e-' + i);
+        return '<div class="battle-fighter relative" id="fighter-' + idVal + '" data-fighter-id="' + idVal + '">' +
           '<div class="flex items-center gap-2">' +
-            '<span class="text-xl">' + getNinjaEmoji(c.name) + '</span>' +
+            '<span class="text-2xl">' + getNinjaEmoji(c.name) + '</span>' +
             '<div><div class="fighter-name">' + c.name + '</div>' +
             '<div class="text-xs text-slate-400">Lv.' + c.level + ' ' + (ELEMENT_ICONS[c.element] || '') + ' ⚔️' + c.atk + '</div></div>' +
           '</div>' +
-          '<div class="hp-bar-container"><div class="hp-bar" id="enemy-hp-' + i + '" style="width:100%"></div></div>' +
-          '<div class="text-xs text-slate-400 mt-1" id="enemy-hp-text-' + i + '">' + c.hp + '/' + c.maxHp + '</div>' +
+          '<div class="hp-bar-container"><div class="hp-bar" id="hp-bar-' + idVal + '" style="width:100%"></div></div>' +
+          '<div class="text-xs text-slate-400 mt-1" id="hp-text-' + idVal + '">' + c.hp + '/' + c.maxHp + '</div>' +
+          '<div class="damage-overlay" id="dmg-overlay-' + idVal + '"></div>' +
         '</div>';
       }).join('');
   }
 
-  // Animate battle log
+  // Clear log and results
   var logEl = document.getElementById('battleLog');
   var resultEl = document.getElementById('battleResult');
   var closeBtn = document.getElementById('battleCloseBtn');
@@ -578,52 +745,198 @@ function openBattleModal(battleData) {
   if (resultEl) { resultEl.classList.add('hidden'); }
   if (closeBtn) { closeBtn.classList.add('hidden'); }
 
-  var log = battleData.log || [];
-  var delay = 0;
-  var interval = 150;
+  var turns = battleData.turns || [];
 
-  log.forEach(function(entry, idx) {
-    setTimeout(function() {
-      if (!logEl) return;
-      var cls = 'log-entry';
-      if (entry.indexOf('VICTORY') !== -1) cls += ' victory';
-      else if (entry.indexOf('DEFEAT') !== -1) cls += ' defeat';
-      else if (entry.indexOf('🔄') !== -1 || entry.indexOf('⚔️') !== -1) cls += ' info';
+  if (turns.length > 0) {
+    var arenaEl = document.getElementById('battleArena') || document.querySelector('.battle-teams');
+    for (var idx = 0; idx < turns.length; idx++) {
+      var turnObj = turns[idx];
+      var attackerEl = document.querySelector('[data-fighter-id="' + turnObj.attackerId + '"]');
+      var defenderEl = document.querySelector('[data-fighter-id="' + turnObj.defenderId + '"]');
+      var hpBar = document.getElementById('hp-bar-' + turnObj.defenderId);
+      var hpText = document.getElementById('hp-text-' + turnObj.defenderId);
+      var dmgOverlay = document.getElementById('dmg-overlay-' + turnObj.defenderId);
 
-      var div = document.createElement('div');
-      div.className = cls;
-      div.textContent = entry;
-      logEl.appendChild(div);
-      logEl.scrollTop = logEl.scrollHeight;
-
-      // Show result on last entry
-      if (idx === log.length - 1) {
-        setTimeout(function() {
-          if (resultEl) {
-            var isVictory = battleData.result === 'player' || battleData.result === 'attacker_wins';
-            resultEl.className = 'battle-result ' + (isVictory ? 'victory' : 'defeat');
-            resultEl.innerHTML = isVictory ? '🏆 VICTORY!' : '💔 DEFEAT';
-
-            if (battleData.goldGained) {
-              resultEl.innerHTML += '<div class="text-lg text-shinobi-gold mt-2">+' + battleData.goldGained + 'G</div>';
-            }
-            if (battleData.xpGained) {
-              resultEl.innerHTML += '<div class="text-sm text-indigo-400">+' + battleData.xpGained + ' XP</div>';
-            }
-            if (battleData.levelUpMessages && battleData.levelUpMessages.length > 0) {
-              resultEl.innerHTML += '<div class="text-sm text-green-400 mt-1">' + battleData.levelUpMessages.join('<br>') + '</div>';
-            }
-            if (battleData.equipmentReward) {
-              resultEl.innerHTML += '<div class="text-sm text-purple-400 mt-1">🛡️ Equipment: ' + battleData.equipmentReward.name + '</div>';
-            }
-            resultEl.classList.remove('hidden');
-          }
-          if (closeBtn) { closeBtn.classList.remove('hidden'); }
-        }, 500);
+      if (logEl) {
+        var div = document.createElement('div');
+        div.className = 'log-entry py-1.5 border-b border-slate-800/40 flex items-center justify-between gap-2 flex-wrap';
+        
+        var attackerColor = turnObj.isPlayerAttacking ? 'text-green-400' : 'text-red-400';
+        var defenderColor = turnObj.isPlayerAttacking ? 'text-red-400' : 'text-green-400';
+        
+        var badgeHTML = '';
+        if (turnObj.elementMultiplier > 1) {
+          badgeHTML = ' <span class="bg-orange-500/20 text-orange-400 border border-orange-500/40 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase animate-pulse">🔥 Vantagem</span>';
+        } else if (turnObj.elementMultiplier < 1) {
+          badgeHTML = ' <span class="bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase">🛡️ Resistido</span>';
+        }
+        
+        var damageText = '<span class="font-mono font-bold ' + (turnObj.elementMultiplier > 1 ? 'text-orange-400 text-sm' : 'text-red-400') + '">' + turnObj.damage + '</span>';
+        
+        div.innerHTML = '<div class="flex items-center gap-1.5">' +
+                          '<span class="text-slate-500 text-xs">[' + turnObj.turn + ']</span>' +
+                          '<span class="' + attackerColor + ' font-bold">' + turnObj.attackerName + '</span>' +
+                          '<span class="text-slate-400 text-xs">ataca</span>' +
+                          '<span class="' + defenderColor + ' font-bold">' + turnObj.defenderName + '</span>' +
+                          '<span class="text-slate-400 text-xs">causando</span>' +
+                          damageText +
+                          '<span class="text-slate-400 text-xs">de dano</span>' +
+                          badgeHTML +
+                        '</div>' +
+                        '<div class="text-[11px] text-slate-500 font-mono">(' + Math.max(0, turnObj.defenderHpRemaining) + '/' + turnObj.defenderMaxHp + ' HP)</div>';
+        
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
       }
-    }, delay);
-    delay += interval;
-  });
+
+      if (!state.skipBattle) {
+        // Progressive Hit Stop based on damage severity
+        var hitStopMs = turnObj.damage > 150 ? 120 : (turnObj.elementMultiplier > 1 ? 80 : 40);
+        await new Promise(function(resolve) { setTimeout(resolve, hitStopMs); });
+
+        var isCritical = turnObj.damage > 80 || turnObj.elementMultiplier > 1;
+        var shakeClass = turnObj.damage > 150 ? 'shake-ultimate' : isCritical ? 'shake-heavy' : 'shake-light';
+
+        if (arenaEl) {
+          arenaEl.classList.remove('shake-light', 'shake-heavy', 'shake-ultimate');
+          void arenaEl.offsetWidth; // Trigger reflow
+          arenaEl.classList.add(shakeClass);
+        }
+
+        // Impact Frame Flash on Critical Hits
+        if (isCritical) {
+          document.body.classList.remove('impact-frame-active');
+          void document.body.offsetWidth;
+          document.body.classList.add('impact-frame-active');
+          setTimeout(function() { document.body.classList.remove('impact-frame-active'); }, 80);
+        }
+
+        // Elemental VFX Burst (Phase 5)
+        var elemMap = { Fire: 'vfx-katon', Lightning: 'vfx-raiton', Water: 'vfx-suiton', Wind: 'vfx-fuuton', Earth: 'vfx-doton' };
+        var vfxClass = elemMap[turnObj.attackerElement] || 'vfx-katon';
+        if (defenderEl) {
+          var vfxDiv = document.createElement('div');
+          vfxDiv.className = 'vfx-element-overlay ' + vfxClass;
+          defenderEl.appendChild(vfxDiv);
+          setTimeout(function() { if (vfxDiv.parentNode) vfxDiv.parentNode.removeChild(vfxDiv); }, 600);
+        }
+
+        // Hand-Sign Casting & Chakra Charge (Phase 6)
+        if (attackerEl) {
+          attackerEl.classList.add('chakra-aura-active');
+          var signDiv = document.createElement('div');
+          signDiv.className = 'hand-sign-badge absolute -top-3 left-1/2 -translate-x-1/2 z-50';
+          signDiv.innerHTML = '🖐️ Moldando Selos';
+          attackerEl.appendChild(signDiv);
+          setTimeout(function() { 
+            attackerEl.classList.remove('chakra-aura-active');
+            if (signDiv.parentNode) signDiv.parentNode.removeChild(signDiv);
+          }, 700);
+        }
+
+        if (attackerEl) attackerEl.classList.add('animate-attack');
+        if (defenderEl) defenderEl.classList.add('animate-damage');
+
+        if (dmgOverlay) {
+          var elemIcon = turnObj.elementMultiplier > 1 ? '🔥 CRITICAL ' : turnObj.elementMultiplier < 1 ? '💧 ' : '';
+          var critClass = isCritical ? ' critical-damage-text' : '';
+          dmgOverlay.innerHTML = '<span class="floating-damage-text' + critClass + '">-' + turnObj.damage + ' ' + elemIcon + '</span>';
+          setTimeout(function() { if (dmgOverlay) dmgOverlay.innerHTML = ''; }, 600);
+        }
+      }
+
+      if (hpBar && hpText) {
+        var pct = Math.max(0, (turnObj.defenderHpRemaining / turnObj.defenderMaxHp) * 100);
+        hpBar.style.width = pct + '%';
+        if (pct < 30) { hpBar.className = 'hp-bar low'; }
+        else if (pct < 60) { hpBar.className = 'hp-bar medium'; }
+        hpText.textContent = turnObj.defenderHpRemaining + '/' + turnObj.defenderMaxHp;
+      }
+
+      if (turnObj.defenderDefeated && defenderEl) {
+        defenderEl.classList.add('defeated');
+        if (logEl) {
+          var koDiv = document.createElement('div');
+          koDiv.className = 'log-entry defeat';
+          koDiv.textContent = '💀 ' + turnObj.defenderName + ' foi derrotado!';
+          logEl.appendChild(koDiv);
+          logEl.scrollTop = logEl.scrollHeight;
+        }
+      }
+
+      var isFinalBlow = idx === turns.length - 1;
+      if (!state.skipBattle) {
+        var multiplier = isFinalBlow ? 3 : 1;
+        var delayMs = (800 * multiplier) / (state.battleSpeed || 1);
+
+        if (isFinalBlow && arenaEl) {
+          arenaEl.classList.add('cinematic-slowmo');
+          // Sub-bass slowmo finish sound effect
+          try {
+            var audioCtx = getAudioContext();
+            if (audioCtx) {
+              var osc = audioCtx.createOscillator();
+              var gain = audioCtx.createGain();
+              osc.connect(gain);
+              gain.connect(audioCtx.destination);
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+              osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 1.2);
+              gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+              gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+              osc.start();
+              osc.stop(audioCtx.currentTime + 1.5);
+            }
+          } catch(e){}
+        }
+
+        await new Promise(function(resolve) { setTimeout(resolve, delayMs); });
+
+        if (isFinalBlow && arenaEl) {
+          arenaEl.classList.remove('cinematic-slowmo');
+        }
+
+        if (attackerEl) attackerEl.classList.remove('animate-attack');
+        if (defenderEl) defenderEl.classList.remove('animate-damage');
+      }
+    }
+  } else {
+    var log = battleData.log || [];
+    for (var i = 0; i < log.length; i++) {
+      if (logEl) {
+        var div = document.createElement('div');
+        div.className = 'log-entry';
+        div.textContent = log[i];
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      if (!state.skipBattle) {
+        var delayMs = 300 / (state.battleSpeed || 1);
+        await new Promise(function(resolve) { setTimeout(resolve, delayMs); });
+      }
+    }
+  }
+
+  if (resultEl) {
+    var isVictory = battleData.result === 'player' || battleData.result === 'attacker_wins';
+    resultEl.className = 'battle-result ' + (isVictory ? 'victory' : 'defeat');
+    resultEl.innerHTML = isVictory ? '🏆 VICTORY!' : '💔 DEFEAT';
+
+    if (battleData.goldGained) {
+      resultEl.innerHTML += '<div class="text-lg text-shinobi-gold mt-2">+' + battleData.goldGained + 'G</div>';
+    }
+    if (battleData.xpGained) {
+      resultEl.innerHTML += '<div class="text-sm text-indigo-400">+' + battleData.xpGained + ' XP</div>';
+    }
+    if (battleData.levelUpMessages && battleData.levelUpMessages.length > 0) {
+      resultEl.innerHTML += '<div class="text-sm text-green-400 mt-1">' + battleData.levelUpMessages.join('<br>') + '</div>';
+    }
+    if (battleData.equipmentReward) {
+      resultEl.innerHTML += '<div class="text-sm text-purple-400 mt-1">🛡️ Equipment: ' + battleData.equipmentReward.name + '</div>';
+    }
+    resultEl.classList.remove('hidden');
+  }
+  if (closeBtn) { closeBtn.classList.remove('hidden'); }
 }
 
 function closeBattle() {
@@ -641,8 +954,8 @@ function renderQuickBattle() {
   var container = document.getElementById('quickBattleCards');
   if (!container) return;
   container.innerHTML = state.inventory.map(function(card) {
-  return renderCardHTML(card, { onClick: "Game.quickBattle(&quot;" + card.id + "&quot;)" });
-}).join('');
+    return renderCardHTML(card, { onClick: "Game.quickBattle(&quot;" + card.id + "&quot;)" });
+  }).join('');
 }
 
 async function quickBattle(cardId) {
@@ -654,6 +967,7 @@ async function quickBattle(cardId) {
     openBattleModal({
       result: data.result,
       log: data.log,
+      turns: data.turns,
       background: data.background,
       playerSquad: [playerCard],
       enemySquad: [enemyCard],
@@ -675,6 +989,7 @@ async function startSquadBattle() {
     openBattleModal({
       result: data.result,
       log: data.log,
+      turns: data.turns,
       background: data.background,
       playerSquad: data.playerSquad || [],
       enemySquad: data.enemySquad || [],
@@ -696,6 +1011,7 @@ async function startBossBattle() {
     openBattleModal({
       result: data.result,
       log: data.log,
+      turns: data.turns,
       background: data.background,
       playerSquad: data.playerSquad || [],
       enemySquad: data.boss ? [data.boss] : [],
@@ -716,39 +1032,62 @@ async function loadTowerStatus() {
     state.highestFloor = data.highestFloor || 1;
     updateNavBar();
 
+    var floor = data.highestFloor;
     var floorEl = document.getElementById('towerFloor');
-    if (floorEl) floorEl.textContent = data.highestFloor;
+    if (floorEl) floorEl.textContent = floor;
+
+    var progressEl = document.getElementById('towerProgressBar');
+    if (progressEl) {
+      var pct = Math.min(100, Math.max(2, Math.round((floor / 50) * 100)));
+      progressEl.style.width = pct + '%';
+    }
+
+    var milestoneBadge = document.getElementById('towerMilestoneBadge');
+    if (milestoneBadge) {
+      if (floor % 5 === 0) {
+        milestoneBadge.classList.remove('hidden');
+      } else {
+        milestoneBadge.classList.add('hidden');
+      }
+    }
 
     var diffEl = document.getElementById('towerDifficulty');
     if (diffEl) {
-      var floor = data.highestFloor;
       var diff = 'Common/Rare';
-      if (floor > 40) diff = 'Legendary/SSR/UR';
-      else if (floor > 20) diff = 'Epic/Legendary';
-      else if (floor > 10) diff = 'Rare/Epic';
+      if (floor > 40) diff = 'Legendary/SSR/UR Bosses';
+      else if (floor > 20) diff = 'Epic/Legendary Guardians';
+      else if (floor > 10) diff = 'Rare/Epic Ninjas';
       diffEl.textContent = 'Difficulty: ' + diff;
     }
 
     if (data.currentFloorData) {
       var goldEl = document.getElementById('towerGoldReward');
-      if (goldEl) goldEl.textContent = 'Reward: ' + data.currentFloorData.goldReward + 'G';
+      if (goldEl) goldEl.textContent = data.currentFloorData.goldReward + 'G';
       var xpEl = document.getElementById('towerXpReward');
-      if (xpEl) xpEl.textContent = 'XP: ' + data.currentFloorData.xpReward;
+      if (xpEl) xpEl.textContent = data.currentFloorData.xpReward + ' XP';
       var eqEl = document.getElementById('towerEqReward');
-      if (eqEl) eqEl.textContent = data.currentFloorData.equipmentReward ? '🛡️ ' + data.currentFloorData.equipmentReward : '';
+      if (eqEl) eqEl.textContent = data.currentFloorData.equipmentReward ? '🛡️ ' + data.currentFloorData.equipmentReward : 'None';
 
       var enemiesEl = document.getElementById('towerEnemies');
       if (enemiesEl && data.currentFloorData.enemies) {
-        enemiesEl.innerHTML = '<div class="text-sm font-bold text-slate-300 mb-2">Enemies:</div>' +
-          '<div class="flex flex-wrap gap-2">' +
-          data.currentFloorData.enemies.map(function(e) {
-            return '<div class="bg-shinobi-dark rounded-lg px-3 py-2 text-xs">' +
-              '<span class="font-bold">' + e.name + '</span> ' +
-              (ELEMENT_ICONS[e.element] || '') + ' Lv.' + e.level +
-              ' <span class="text-red-400">⚔️' + e.atk + '</span>' +
-              ' <span class="text-green-400">❤️' + e.hp + '</span>' +
-            '</div>';
-          }).join('') + '</div>';
+        enemiesEl.innerHTML = data.currentFloorData.enemies.map(function(e) {
+          var icon = ELEMENT_ICONS[e.element] || '❓';
+          var img = e.image || '/images/naruto.jpg';
+          var rarityColor = RARITY_COLORS[e.rarity] || '#94a3b8';
+
+          return '<div class="bg-shinobi-dark border rounded-xl p-3 flex flex-col items-center text-center transition-all hover:scale-105" style="border-color: ' + rarityColor + '">' +
+            '<div class="relative w-14 h-14 mb-2">' +
+              '<img src="' + img + '" class="w-full h-full rounded-full object-cover border-2 shadow-md" style="border-color: ' + rarityColor + '">' +
+              '<span class="absolute -bottom-1 -right-1 text-xs bg-slate-900 border border-slate-700 px-1 rounded-full">' + icon + '</span>' +
+            '</div>' +
+            '<div class="font-bold text-xs text-slate-100 truncate w-full mb-1">' + e.name + '</div>' +
+            '<div class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase mb-2" style="background-color: ' + rarityColor + '20; color: ' + rarityColor + '">' + e.rarity + '</div>' +
+            '<div class="w-full text-[11px] flex justify-between px-1 text-slate-300">' +
+              '<span>⚔️ ' + e.atk + '</span>' +
+              '<span>❤️ ' + e.hp + '</span>' +
+            '</div>' +
+          '</div>';
+        }).join('');
       }
     }
 
@@ -757,7 +1096,49 @@ async function loadTowerStatus() {
       resetBtn.disabled = !data.canReset;
       resetBtn.style.opacity = data.canReset ? '1' : '0.5';
     }
+
+    renderTowerRoadmap(floor);
   } catch (err) { /* shown */ }
+}
+
+function renderTowerRoadmap(currentFloor) {
+  var listEl = document.getElementById('towerRoadmapList');
+  if (!listEl) return;
+
+  var html = '';
+  for (var f = 1; f <= 50; f++) {
+    var isCurrent = f === currentFloor;
+    var isCleared = f < currentFloor;
+    var isMilestone = f % 5 === 0;
+
+    var bgClass = 'bg-slate-900/60 border-slate-800 text-slate-500';
+    var icon = '🔒';
+
+    if (isCurrent) {
+      bgClass = 'bg-indigo-600/30 border-indigo-500 text-indigo-300 font-bold shadow-glow animate-pulse';
+      icon = '📍';
+    } else if (isCleared) {
+      bgClass = 'bg-emerald-950/40 border-emerald-600/50 text-emerald-400';
+      icon = '✅';
+    } else if (isMilestone) {
+      bgClass = 'bg-amber-950/30 border-amber-600/60 text-amber-400 font-semibold';
+      icon = '👑';
+    }
+
+    html += '<div class="p-2 rounded-lg border text-center text-xs flex flex-col items-center justify-between gap-1 ' + bgClass + '">' +
+      '<span class="text-base">' + icon + '</span>' +
+      '<span>Floor ' + f + '</span>' +
+      (isMilestone ? '<span class="text-[9px] bg-amber-500/20 text-amber-300 px-1 rounded font-bold">REWARD</span>' : '') +
+    '</div>';
+  }
+  listEl.innerHTML = html;
+}
+
+function toggleTowerRoadmap() {
+  var roadmap = document.getElementById('towerRoadmapContainer');
+  if (roadmap) {
+    roadmap.classList.toggle('hidden');
+  }
 }
 
 async function fightTower() {
@@ -770,10 +1151,11 @@ async function fightTower() {
     openBattleModal({
       result: data.result,
       log: data.log,
+      turns: data.turns,
       background: data.background,
       playerSquad: data.playerSquad || [],
-      enemySquad: (data.enemySquad || []).map(function(e) {
-        return { name: e.name, element: e.element, atk: e.atk, hp: e.hp, maxHp: e.maxHp || e.hp, level: e.level || 1 };
+      enemySquad: (data.enemySquad || []).map(function(e, i) {
+        return { id: `tower-enemy-${data.floor}-${i}`, name: e.name, element: e.element, atk: e.atk, hp: e.hp, maxHp: e.maxHp || e.hp, level: e.level || 1 };
       }),
       goldGained: data.goldGained,
       xpGained: data.xpGained,
@@ -798,16 +1180,79 @@ async function resetTower() {
 // PVP
 // ============================================
 
+function getPvpTierInfo(points) {
+  if (points >= 1000) return { name: 'Kage', icon: '👑', colorClass: 'text-amber-400' };
+  if (points >= 600) return { name: 'ANBU', icon: '⚡', colorClass: 'text-purple-400' };
+  if (points >= 300) return { name: 'Jonin', icon: '🥇', colorClass: 'text-indigo-400' };
+  if (points >= 100) return { name: 'Chunin', icon: '🥈', colorClass: 'text-blue-400' };
+  return { name: 'Genin', icon: '🥉', colorClass: 'text-slate-400' };
+}
+
 function updatePvpStats() {
   var el;
   el = document.getElementById('pvpPoints'); if (el) el.textContent = state.pvpPoints;
   el = document.getElementById('pvpWins'); if (el) el.textContent = state.pvpWins;
   el = document.getElementById('pvpLosses'); if (el) el.textContent = state.pvpLosses;
+
+  var tierInfo = getPvpTierInfo(state.pvpPoints);
+  var tierEl = document.getElementById('pvpTier');
+  if (tierEl) {
+    tierEl.textContent = tierInfo.name + ' ' + tierInfo.icon;
+    tierEl.className = 'text-2xl font-bold ' + tierInfo.colorClass;
+  }
+
+  loadPvpOpponents();
 }
 
-async function challengePvp() {
-  var targetEl = document.getElementById('pvpTarget');
-  var target = targetEl ? targetEl.value.trim() : '';
+async function loadPvpOpponents() {
+  var container = document.getElementById('pvpOpponentsList');
+  if (!container) return;
+
+  try {
+    var opponents = await apiCall('/pvp/opponents/' + USERNAME, 'GET');
+    if (!opponents || opponents.length === 0) {
+      container.innerHTML = '<div class="text-slate-500 col-span-3 text-center py-4">No rivals found in arena.</div>';
+      return;
+    }
+
+    container.replaceChildren();
+    opponents.forEach(function(op) {
+      var tier = op.tier || getPvpTierInfo(op.pvpPoints);
+      var card = document.createElement('div');
+      card.className = 'bg-shinobi-dark border border-slate-700 rounded-xl p-4 flex flex-col justify-between hover:border-purple-500 transition-all';
+      var header = document.createElement('div');
+      header.className = 'flex items-center justify-between mb-2';
+      var name = document.createElement('div');
+      name.className = 'font-bold text-base text-slate-100 flex items-center gap-1.5';
+      name.textContent = '👤 ' + op.username;
+      var badge = document.createElement('span');
+      badge.className = 'text-xs font-bold px-2 py-0.5 rounded bg-slate-800 ' + (tier.colorClass || 'text-purple-400');
+      badge.textContent = (tier.icon || '🥉') + ' ' + (tier.name || 'Genin');
+      header.append(name, badge);
+      var power = document.createElement('div');
+      power.className = 'text-xs text-slate-400 mb-1';
+      power.textContent = '⚔️ Power: ' + (op.totalPower || 0);
+      var record = document.createElement('div');
+      record.className = 'text-xs text-slate-400 mb-3';
+      record.textContent = 'PVP Points: ' + op.pvpPoints + ' (' + op.pvpWins + 'W / ' + op.pvpLosses + 'L)';
+      var details = document.createElement('div');
+      details.append(header, power, record);
+      var button = document.createElement('button');
+      button.className = 'btn-primary text-xs w-full py-2 flex items-center justify-center gap-1';
+      button.textContent = '⚔️ Challenge ' + op.username;
+      button.addEventListener('click', function() { challengePvp(op.username); });
+      card.append(details, button);
+      container.appendChild(card);
+    });
+  } catch (err) { /* shown */ }
+}
+
+async function challengePvp(targetUsername) {
+  var target = targetUsername;
+  if (!target) {
+    var targetEl = document.getElementById('pvpTarget');
+    target = targetEl ? targetEl.value.trim() : '';
+  }
   if (!target) { showToast('Enter opponent username!', 'error'); return; }
   if (target === USERNAME) { showToast('Cannot challenge yourself!', 'error'); return; }
   if (state.squad.length === 0) { showToast('Set your squad first!', 'error'); return; }
@@ -829,6 +1274,7 @@ async function challengePvp() {
     openBattleModal({
       result: data.result,
       log: data.log,
+      turns: data.turns,
       background: data.background,
       playerSquad: data.attackerSquad || [],
       enemySquad: data.defenderSquad || [],
@@ -840,39 +1286,144 @@ async function challengePvp() {
 }
 
 // ============================================
-// EQUIPMENT
+// EQUIPMENT & FORGE SYSTEM
 // ============================================
 
+function setForgeTab(tab) {
+  state.forgeTab = tab;
+  state.selectedEquipmentId = null;
+  state.fusionSlot1 = null;
+  state.fusionSlot2 = null;
+
+  var tabs = ['upgrade', 'fusion', 'manage'];
+  tabs.forEach(function(t) {
+    var btn = document.getElementById('forgeTab' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (btn) {
+      if (t === tab) {
+        btn.className = 'px-6 py-3 font-bold border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2';
+      } else {
+        btn.className = 'px-6 py-3 font-bold text-slate-400 hover:text-slate-200 flex items-center gap-2';
+      }
+    }
+  });
+
+  var invSec = document.getElementById('equipmentInventorySection');
+  var ninjaSec = document.getElementById('ninjaEquipSection');
+
+  if (tab === 'manage') {
+    if (invSec) invSec.classList.add('hidden');
+    if (ninjaSec) ninjaSec.classList.remove('hidden');
+  } else {
+    if (invSec) invSec.classList.remove('hidden');
+    if (ninjaSec) ninjaSec.classList.add('hidden');
+  }
+
+  renderEquipmentScreen();
+}
+
+function filterEquipmentType(type) {
+  state.filterEquipType = type;
+  document.querySelectorAll('.equip-filter-btn').forEach(function(btn) {
+    if (btn.getAttribute('data-type') === type) {
+      btn.classList.add('btn-primary', 'active');
+      btn.classList.remove('btn-secondary');
+    } else {
+      btn.classList.add('btn-secondary');
+      btn.classList.remove('btn-primary', 'active');
+    }
+  });
+  renderEquipmentScreen();
+}
+
+function deselectEquipment() {
+  state.selectedEquipmentId = null;
+  state.fusionSlot1 = null;
+  state.fusionSlot2 = null;
+  renderEquipmentScreen();
+}
+
 function renderEquipmentScreen() {
-  // Unequipped items
   var listEl = document.getElementById('equipmentList');
   var noEqEl = document.getElementById('noEquipment');
+  var countBadge = document.getElementById('equipmentCountBadge');
 
+  if (countBadge) countBadge.textContent = state.equipmentInventory.length + ' Items';
+
+  var filteredItems = state.equipmentInventory.filter(function(eq) {
+    if (state.filterEquipType && eq.type !== state.filterEquipType) return false;
+    return true;
+  });
+
+  var forgeWorkbench = document.getElementById('forgeWorkbench');
+  var fusionWorkbench = document.getElementById('fusionWorkbench');
+
+  // Handle Workbench visibility based on mode
+  if (state.forgeTab === 'upgrade') {
+    if (fusionWorkbench) fusionWorkbench.classList.add('hidden');
+
+    if (state.selectedEquipmentId) {
+      var selItem = state.equipmentInventory.find(function(e) { return e.id === state.selectedEquipmentId; });
+      if (selItem && forgeWorkbench) {
+        forgeWorkbench.classList.remove('hidden');
+        renderForgeUpgradeWorkbench(selItem);
+      } else if (forgeWorkbench) {
+        forgeWorkbench.classList.add('hidden');
+      }
+    } else if (forgeWorkbench) {
+      forgeWorkbench.classList.add('hidden');
+    }
+  } else if (state.forgeTab === 'fusion') {
+    if (forgeWorkbench) forgeWorkbench.classList.add('hidden');
+    if (fusionWorkbench) {
+      fusionWorkbench.classList.remove('hidden');
+      renderFusionWorkbench();
+    }
+  } else {
+    if (forgeWorkbench) forgeWorkbench.classList.add('hidden');
+    if (fusionWorkbench) fusionWorkbench.classList.add('hidden');
+  }
+
+  // Render Equipment Inventory Cards
   if (listEl) {
-    if (state.equipmentInventory.length === 0) {
+    if (filteredItems.length === 0) {
       listEl.innerHTML = '';
       if (noEqEl) noEqEl.classList.remove('hidden');
     } else {
       if (noEqEl) noEqEl.classList.add('hidden');
-      listEl.innerHTML = state.equipmentInventory.map(function(eq) {
-        var selectedClass = state.selectedEquipmentId === eq.id ? ' border-green-400' : '';
-        return '<div class="equipment-card rarity-' + eq.rarity + selectedClass + '" onclick="Game.selectEquipment(\'' + eq.id + '\')">' +
-          '<div class="flex items-center gap-2 mb-1">' +
-            '<span class="text-xl">' + (EQUIP_TYPE_ICONS[eq.type] || '📦') + '</span>' +
-            '<span class="font-bold text-sm">' + eq.name + '</span>' +
+      listEl.innerHTML = filteredItems.map(function(eq) {
+        var isSelected = state.selectedEquipmentId === eq.id || state.fusionSlot1 === eq.id || state.fusionSlot2 === eq.id;
+        var selectedClass = isSelected ? ' ring-2 ring-indigo-400 bg-indigo-950/40' : '';
+        var levelStr = eq.level ? 'Lv.' + eq.level : 'Lv.1';
+        var upgradeCost = 150 * (eq.level || 1);
+        var icon = EQUIP_TYPE_ICONS[eq.type] || '📦';
+
+        var onClickAction = "Game.selectEquipment('" + eq.id + "')";
+
+        return '<div class="equipment-card rarity-' + eq.rarity + selectedClass + ' p-4 rounded-xl border border-slate-700 bg-shinobi-mid hover:border-indigo-500 transition-all flex flex-col justify-between cursor-pointer">' +
+          '<div onclick="' + onClickAction + '">' +
+            '<div class="flex items-center justify-between mb-2">' +
+              '<div class="flex items-center gap-2 font-bold text-sm text-slate-100">' +
+                '<span class="text-xl">' + icon + '</span>' +
+                '<span>' + eq.name + '</span>' +
+              '</div>' +
+              '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-900 rarity-color-' + eq.rarity + '">' + levelStr + '</span>' +
+            '</div>' +
+            '<div class="text-xs rarity-color-' + eq.rarity + ' font-semibold mb-2">' + eq.rarity + ' • ' + eq.type + '</div>' +
+            '<div class="text-xs text-slate-300 font-mono bg-slate-900/60 p-2 rounded mb-2 flex justify-between">' +
+              '<span>⚔️ +' + eq.atkBonus + '</span>' +
+              '<span>❤️ +' + eq.hpBonus + '</span>' +
+            '</div>' +
+            (isSelected ? '<div class="text-xs text-indigo-400 font-bold text-center">✓ Selected</div>' : '') +
           '</div>' +
-          '<div class="text-xs rarity-color-' + eq.rarity + ' font-semibold">' + eq.rarity + ' ' + eq.type + '</div>' +
-          '<div class="text-xs text-slate-400 mt-1">⚔️ +' + eq.atkBonus + ' | ❤️ +' + eq.hpBonus + '</div>' +
-          (state.selectedEquipmentId === eq.id ? '<div class="text-xs text-green-400 mt-1 font-bold">✓ Selected</div>' : '') +
+          (state.forgeTab === 'upgrade' ? '<button onclick="Game.upgradeEquipment(\'' + eq.id + '\')" class="btn-primary text-xs mt-2 w-full py-1.5 font-bold">⬆️ Forge Lv. (' + upgradeCost + 'G)</button>' : '') +
         '</div>';
       }).join('');
     }
   }
 
-  // Card select dropdown
   var selectEl = document.getElementById('equipCardSelect');
   if (selectEl) {
-    selectEl.innerHTML = '<option value="">Select a card to equip...</option>' +
+    selectEl.innerHTML = '<option value="">Select a card to manage equipment...</option>' +
       state.inventory.map(function(c) {
         if (c == null) return '';
         return '<option value="' + c.id + '">' + c.name + ' (Lv.' + c.level + ' ' + c.rarity + ')</option>';
@@ -883,9 +1434,161 @@ function renderEquipmentScreen() {
   renderCardEquipSlots(selectEl ? selectEl.value : '');
 }
 
+function renderForgeUpgradeWorkbench(eq) {
+  var detailsEl = document.getElementById('forgeDetailsContent');
+  if (!detailsEl) return;
+
+  var currentLv = eq.level || 1;
+  var isMax = currentLv >= 10;
+  var cost = 150 * currentLv;
+  var nextAtk = Math.floor(eq.atkBonus * 1.25 + 5);
+  var nextHp = Math.floor(eq.hpBonus * 1.25 + 20);
+  var icon = EQUIP_TYPE_ICONS[eq.type] || '📦';
+
+  detailsEl.innerHTML = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">' +
+    '<div>' +
+      '<div class="flex items-center gap-3 mb-2">' +
+        '<span class="text-4xl p-3 bg-slate-900 rounded-xl border border-indigo-500/40">' + icon + '</span>' +
+        '<div>' +
+          '<div class="text-xl font-bold text-slate-100">' + eq.name + '</div>' +
+          '<div class="text-sm font-semibold rarity-color-' + eq.rarity + '">' + eq.rarity + ' ' + eq.type + ' • Level ' + currentLv + ' / 10</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="w-full bg-slate-900 rounded-full h-2.5 my-3 border border-slate-700 overflow-hidden">' +
+        '<div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-full" style="width: ' + (currentLv * 10) + '%"></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/80">' +
+      '<div class="text-xs text-slate-400 uppercase font-bold mb-2">Stat Upgrade Preview:</div>' +
+      '<div class="flex justify-between items-center text-sm mb-1">' +
+        '<span class="text-slate-300">⚔️ Attack Power:</span>' +
+        '<span class="font-mono font-bold text-slate-200">' + eq.atkBonus + ' <span class="text-green-400">➔ ' + (isMax ? 'MAX' : nextAtk) + '</span></span>' +
+      '</div>' +
+      '<div class="flex justify-between items-center text-sm mb-4">' +
+        '<span class="text-slate-300">❤️ Health Points:</span>' +
+        '<span class="font-mono font-bold text-slate-200">' + eq.hpBonus + ' <span class="text-green-400">➔ ' + (isMax ? 'MAX' : nextHp) + '</span></span>' +
+      '</div>' +
+      (isMax
+        ? '<div class="text-amber-400 font-bold text-center py-2 bg-amber-950/30 rounded border border-amber-500/30">🌟 MAX LEVEL REACHED</div>'
+        : '<button onclick="Game.upgradeEquipment(\'' + eq.id + '\')" class="btn-primary w-full py-2.5 font-bold shadow-lg flex items-center justify-center gap-2 text-base">' +
+            '<span>🔨 Upgrade Item</span>' +
+            '<span class="text-xs bg-slate-900/60 px-2 py-0.5 rounded text-shinobi-gold font-mono">💰 ' + cost + 'G</span>' +
+          '</button>'
+      ) +
+    '</div>' +
+  '</div>';
+}
+
+function renderFusionWorkbench() {
+  var slot1El = document.getElementById('fusionSlot1');
+  var slot2El = document.getElementById('fusionSlot2');
+  var actionEl = document.getElementById('fusionActionArea');
+
+  var item1 = state.fusionSlot1 ? state.equipmentInventory.find(function(e) { return e.id === state.fusionSlot1; }) : null;
+  var item2 = state.fusionSlot2 ? state.equipmentInventory.find(function(e) { return e.id === state.fusionSlot2; }) : null;
+
+  if (slot1El) {
+    if (item1) {
+      slot1El.innerHTML = '<div class="flex flex-col items-center gap-1 rarity-' + item1.rarity + ' p-2 rounded-lg w-full">' +
+        '<span class="text-2xl">' + (EQUIP_TYPE_ICONS[item1.type] || '📦') + '</span>' +
+        '<span class="font-bold text-xs text-slate-100">' + item1.name + '</span>' +
+        '<span class="text-[10px] rarity-color-' + item1.rarity + '">' + item1.rarity + ' • Lv.' + (item1.level || 1) + '</span>' +
+        '<button onclick="Game.selectEquipmentForFusion(\'' + item1.id + '\')" class="text-[10px] text-red-400 underline mt-1">Remove</button>' +
+      '</div>';
+    } else {
+      slot1El.innerHTML = '<span class="text-slate-500 text-sm">Select Primary Item below</span>';
+    }
+  }
+
+  if (slot2El) {
+    if (item2) {
+      slot2El.innerHTML = '<div class="flex flex-col items-center gap-1 rarity-' + item2.rarity + ' p-2 rounded-lg w-full">' +
+        '<span class="text-2xl">' + (EQUIP_TYPE_ICONS[item2.type] || '📦') + '</span>' +
+        '<span class="font-bold text-xs text-slate-100">' + item2.name + '</span>' +
+        '<span class="text-[10px] rarity-color-' + item2.rarity + '">' + item2.rarity + ' • Lv.' + (item2.level || 1) + '</span>' +
+        '<button onclick="Game.selectEquipmentForFusion(\'' + item2.id + '\')" class="text-[10px] text-red-400 underline mt-1">Remove</button>' +
+      '</div>';
+    } else {
+      slot2El.innerHTML = '<span class="text-slate-500 text-sm">Select Duplicate Item below</span>';
+    }
+  }
+
+  if (actionEl) {
+    if (item1 && item2) {
+      var costs = { Common: 200, Rare: 500, Epic: 1000, Legendary: 2500, SSR: 5000 };
+      var cost = costs[item1.rarity] || 300;
+      actionEl.innerHTML = '<div class="bg-purple-950/40 border border-purple-500/40 p-4 rounded-xl max-w-md mx-auto mb-2">' +
+        '<div class="text-sm font-bold text-purple-300 mb-1">✨ Ready to Fuse!</div>' +
+        '<div class="text-xs text-slate-300 mb-3">Fusion Cost: <span class="text-shinobi-gold font-bold">' + cost + 'G</span></div>' +
+        '<button onclick="Game.fuseEquipment()" class="btn-primary w-full py-2.5 font-bold shadow-lg text-base">' +
+          '✨ Perform Fusion & Evolve Rarity' +
+        '</button>' +
+      '</div>';
+    } else {
+      actionEl.innerHTML = '<div class="text-slate-500 text-xs">Select 2 items of the same slot type & rarity from your inventory below.</div>';
+    }
+  }
+}
+
 function selectEquipment(eqId) {
-  state.selectedEquipmentId = state.selectedEquipmentId === eqId ? null : eqId;
+  if (state.forgeTab === 'fusion') {
+    selectEquipmentForFusion(eqId);
+  } else {
+    state.selectedEquipmentId = state.selectedEquipmentId === eqId ? null : eqId;
+    renderEquipmentScreen();
+  }
+}
+
+function selectEquipmentForFusion(eqId) {
+  if (state.fusionSlot1 === eqId) {
+    state.fusionSlot1 = null;
+  } else if (state.fusionSlot2 === eqId) {
+    state.fusionSlot2 = null;
+  } else if (!state.fusionSlot1) {
+    state.fusionSlot1 = eqId;
+  } else if (!state.fusionSlot2) {
+    var item1 = state.equipmentInventory.find(function(e) { return e.id === state.fusionSlot1; });
+    var item2 = state.equipmentInventory.find(function(e) { return e.id === eqId; });
+
+    if (item1 && item2) {
+      if (item1.rarity !== item2.rarity) {
+        showToast('Both items must have the same rarity! (' + item1.rarity + ' vs ' + item2.rarity + ')', 'error');
+        return;
+      }
+      if (item1.type !== item2.type) {
+        showToast('Both items must have the same slot type! (' + item1.type + ' vs ' + item2.type + ')', 'error');
+        return;
+      }
+    }
+    state.fusionSlot2 = eqId;
+  } else {
+    showToast('Both fusion slots full. Remove one first!', 'error');
+    return;
+  }
   renderEquipmentScreen();
+}
+
+async function fuseEquipment() {
+  if (!state.fusionSlot1 || !state.fusionSlot2) {
+    showToast('Select two items to fuse!', 'error');
+    return;
+  }
+  try {
+    var data = await apiCall('/equipment/fuse', 'POST', {
+      username: USERNAME,
+      item1Id: state.fusionSlot1,
+      item2Id: state.fusionSlot2
+    });
+
+    showToast(data.message, 'success');
+    state.gold = data.currentGold;
+    state.equipmentInventory = data.equipmentInventory || state.equipmentInventory;
+    state.fusionSlot1 = null;
+    state.fusionSlot2 = null;
+    updateNavBar();
+    await loadPlayerData();
+    renderEquipmentScreen();
+  } catch (err) { /* shown */ }
 }
 
 function renderCardEquipSlots(cardId) {
@@ -906,23 +1609,30 @@ function renderCardEquipSlots(cardId) {
     var icon = EQUIP_TYPE_ICONS[slot] || '📦';
 
     if (eq != null) {
+      var levelStr = eq.level ? 'Lv.' + eq.level : 'Lv.1';
+      var upgradeCost = 150 * (eq.level || 1);
       return '<div class="bg-shinobi-mid border border-slate-600 rounded-xl p-4">' +
-        '<div class="flex items-center gap-2 mb-2">' +
-          '<span class="text-2xl">' + icon + '</span>' +
-          '<div><div class="font-bold">' + eq.name + '</div>' +
-          '<div class="text-xs rarity-color-' + eq.rarity + '">' + eq.rarity + '</div></div>' +
+        '<div class="flex items-center justify-between gap-2 mb-2">' +
+          '<div class="flex items-center gap-2">' +
+            '<span class="text-2xl">' + icon + '</span>' +
+            '<div><div class="font-bold text-sm text-slate-100">' + eq.name + '</div>' +
+            '<div class="text-xs rarity-color-' + eq.rarity + '">' + eq.rarity + ' • ' + levelStr + '</div></div>' +
+          '</div>' +
         '</div>' +
-        '<div class="text-sm text-slate-400">⚔️ +' + eq.atkBonus + ' | ❤️ +' + eq.hpBonus + '</div>' +
-        '<button onclick="Game.unequipItem(\'' + cardId + '\', \'' + slot + '\')" class="btn-danger text-xs mt-2 w-full">Unequip</button>' +
+        '<div class="text-xs text-slate-400 mb-2 font-mono">⚔️ +' + eq.atkBonus + ' | ❤️ +' + eq.hpBonus + '</div>' +
+        '<div class="flex gap-2">' +
+          '<button onclick="Game.upgradeEquipment(\'' + eq.id + '\')" class="btn-primary text-xs flex-1 py-1 font-bold">⬆️ Upgrade (' + upgradeCost + 'G)</button>' +
+          '<button onclick="Game.unequipItem(\'' + cardId + '\', \'' + slot + '\')" class="btn-danger text-xs py-1">Unequip</button>' +
+        '</div>' +
       '</div>';
     }
 
     return '<div class="bg-shinobi-mid border border-dashed border-slate-600 rounded-xl p-4">' +
       '<div class="flex items-center gap-2 mb-2">' +
         '<span class="text-2xl opacity-40">' + icon + '</span>' +
-        '<div class="text-slate-500 font-bold">' + slot + ' — Empty</div>' +
+        '<div class="text-slate-500 font-bold text-sm">' + slot + ' — Empty</div>' +
       '</div>' +
-      (state.selectedEquipmentId ? '<button onclick="Game.equipItem(\'' + cardId + '\')" class="btn-success text-xs mt-2 w-full">Equip Selected</button>' : '<div class="text-xs text-slate-600">Select equipment above</div>') +
+      (state.selectedEquipmentId ? '<button onclick="Game.equipItem(\'' + cardId + '\')" class="btn-success text-xs mt-2 w-full font-bold">Equip Selected</button>' : '<div class="text-xs text-slate-600">Select equipment to equip</div>') +
     '</div>';
   }).join('');
 }
@@ -955,6 +1665,20 @@ async function unequipItem(cardId, slot) {
   } catch (err) { /* shown */ }
 }
 
+async function upgradeEquipment(equipmentId) {
+  try {
+    var data = await apiCall('/equipment/upgrade', 'POST', {
+      username: USERNAME,
+      equipmentId: equipmentId
+    });
+    showToast(data.message, 'success');
+    state.gold = data.currentGold;
+    updateNavBar();
+    await loadPlayerData();
+    renderEquipmentScreen();
+  } catch (err) { /* shown */ }
+}
+
 // ============================================
 // MARKET
 // ============================================
@@ -978,7 +1702,6 @@ function renderMarket() {
 // ============================================
 
 async function loadRanking(type) {
-  // Update tab styles
   document.querySelectorAll('.ranking-tab').forEach(function(t) {
     t.classList.remove('btn-primary');
     t.classList.add('btn-secondary');
@@ -1010,7 +1733,14 @@ async function loadRanking(type) {
         (pvpData || []).map(function(r, i) {
           var rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
           var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '#' + (i + 1);
-          return '<div class="ranking-row"><div class="rank ' + rankClass + '">' + medal + '</div><div class="font-bold">' + r.username + '</div><div class="text-purple-400">' + r.pvpPoints + '</div><div><span class="text-green-400">' + r.pvpWins + '</span>/<span class="text-red-400">' + r.pvpLosses + '</span></div><div>' + r.winRate + '%</div></div>';
+          var tier = r.tier || getPvpTierInfo(r.pvpPoints);
+          return '<div class="ranking-row">' +
+            '<div class="rank ' + rankClass + '">' + medal + '</div>' +
+            '<div class="font-bold flex items-center gap-1.5">' + r.username + ' <span class="text-xs px-1.5 py-0.5 bg-slate-800 rounded ' + (tier.colorClass || 'text-purple-400') + '">' + (tier.icon || '🥉') + ' ' + (tier.name || 'Genin') + '</span></div>' +
+            '<div class="text-purple-400 font-bold">' + r.pvpPoints + '</div>' +
+            '<div><span class="text-green-400">' + r.pvpWins + '</span>/<span class="text-red-400">' + r.pvpLosses + '</span></div>' +
+            '<div>' + r.winRate + '%</div>' +
+          '</div>';
         }).join('');
     }
   } catch (err) { /* shown */ }
@@ -1019,97 +1749,111 @@ async function loadRanking(type) {
 function showRanking(type) {
   loadRanking(type);
 }
-// Configurações de animação e delay
-const BATTLE_DELAY = 1000; 
 
-async function startSquadBattle(enemySquad, battleTitle = "Combate Shinobi") {
-    const modal = document.getElementById('battleModal');
-    const logContainer = document.getElementById('battleLog');
-    const playerSide = document.getElementById('battlePlayerSide');
-    const enemySide = document.getElementById('battleEnemySide');
-    
-    // Preparar Arena
-    modal.classList.remove('hidden');
-    logContainer.innerHTML = `<div class="text-indigo-400 font-bold">Iniciando: ${battleTitle}</div>`;
-    document.getElementById('battleLocationName').innerText = battleTitle;
-    
-    // Clonar o squad para não resetar o HP original do estado do jogo
-    let playerTeam = state.squad.map(c => ({ ...c, currentHp: c.hp }));
-    let enemyTeam = enemySquad.map(e => ({ ...e, currentHp: e.hp }));
+// ============================================
+// VOLUMETRIC WEATHER ENGINE (PHASE 3)
+// ============================================
 
-    renderBattleTeams(playerTeam, enemyTeam);
+var currentWeatherMode = 'clear';
+var weatherParticles = [];
+var weatherAnimId = null;
 
-    // Loop de Batalha Simples (1 vs 1 do Squad ou em massa)
-    let turn = 0;
-    while (playerTeam.some(c => c.currentHp > 0) && enemyTeam.some(e => e.currentHp > 0)) {
-        const attacker = turn % 2 === 0 ? playerTeam[0] : enemyTeam[0];
-        const defender = turn % 2 === 0 ? enemyTeam[0] : playerTeam[0];
+function initWeatherEngine() {
+  var canvas = document.getElementById('weatherCanvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
 
-        await performAttack(attacker, defender, turn % 2 === 0);
-        
-        // Remover mortos
-        if (defender.currentHp <= 0) {
-            logContainer.innerHTML += `<div class="text-red-500">${defender.name} foi derrotado!</div>`;
-            if (turn % 2 === 0) enemyTeam.shift(); else playerTeam.shift();
-        }
+  function spawnParticles() {
+    weatherParticles = [];
+    var count = currentWeatherMode === 'clear' ? 40 : (currentWeatherMode === 'snow' ? 70 : 120);
+    for (var i = 0; i < count; i++) {
+      weatherParticles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 3 + 1,
+        speedY: currentWeatherMode === 'rain' || currentWeatherMode === 'storm' ? Math.random() * 12 + 10 : Math.random() * 1.5 + 0.5,
+        speedX: currentWeatherMode === 'snow' ? Math.sin(Math.random() * Math.PI) * 1 : (currentWeatherMode === 'clear' ? Math.random() * 1.5 - 0.5 : Math.random() * 2 - 1),
+        opacity: Math.random() * 0.7 + 0.3,
+        rotation: Math.random() * Math.PI * 2
+      });
+    }
+  }
 
-        turn++;
-        await new Promise(r => setTimeout(r, BATTLE_DELAY));
-        logContainer.scrollTop = logContainer.scrollHeight;
+  spawnParticles();
+
+  function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Random Lightning Flash for Storm mode
+    if (currentWeatherMode === 'storm' && Math.random() < 0.015) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Resultado Final
-    showBattleResult(playerTeam.length > 0);
+    weatherParticles.forEach(function(p) {
+      p.y += p.speedY;
+      p.x += p.speedX;
+
+      if (p.y > canvas.height) { p.y = -10; p.x = Math.random() * canvas.width; }
+      if (p.x > canvas.width) p.x = 0;
+      if (p.x < 0) p.x = canvas.width;
+
+      ctx.save();
+      ctx.globalAlpha = p.opacity;
+
+      if (currentWeatherMode === 'clear') {
+        // Sakura Petal
+        ctx.fillStyle = '#f472b6';
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, p.size * 2, p.size, p.rotation, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (currentWeatherMode === 'rain' || currentWeatherMode === 'storm') {
+        // Rain Streak
+        ctx.strokeStyle = currentWeatherMode === 'storm' ? '#93c5fd' : '#bfdbfe';
+        ctx.lineWidth = p.size * 0.8;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + p.speedX * 2, p.y + p.speedY * 1.5);
+        ctx.stroke();
+      } else if (currentWeatherMode === 'snow') {
+        // Snow Flake
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+
+    weatherAnimId = requestAnimationFrame(loop);
+  }
+
+  if (weatherAnimId) cancelAnimationFrame(weatherAnimId);
+  loop();
 }
 
-async function performAttack(attacker, defender, isPlayerAttacking) {
-    const log = document.getElementById('battleLog');
-    const damage = Math.max(10, attacker.atk - (defender.def || 0) / 2);
-    
-    defender.currentHp -= damage;
-
-    // Animação Visual
-    const attackerEl = document.querySelector(`[data-id="${attacker.id}"]`);
-    const defenderEl = document.querySelector(`[data-id="${defender.id}"]`);
-
-    if (attackerEl) attackerEl.classList.add('animate-attack');
-    if (defenderEl) {
-        defenderEl.classList.add('animate-damage');
-        updateHPBar(defender);
-    }
-
-    log.innerHTML += `<div>${attacker.name} causou <span class="text-yellow-400">${Math.floor(damage)}</span> de dano em ${defender.name}</div>`;
-
-    await new Promise(r => setTimeout(r, 600));
-    if (attackerEl) attackerEl.classList.remove('animate-attack');
-    if (defenderEl) defenderEl.classList.remove('animate-damage');
+function setWeatherMode(mode) {
+  var valid = ['clear', 'rain', 'storm', 'snow'];
+  if (valid.indexOf(mode) !== -1) {
+    currentWeatherMode = mode;
+    initWeatherEngine();
+    var labels = {
+      'clear': '🌸 Clima: Céu Limpo & Pétalas de Sakura',
+      'rain': '🌧️ Clima: Chuva com Poças D\'água PBR',
+      'storm': '⚡ Clima: Tempestade Elétrica com Raios',
+      'snow': '❄️ Clima: Neve de Inverno Shinobi'
+    };
+    showToast(labels[mode] || 'Clima alterado.', 'info');
+  }
 }
 
-function updateHPBar(char) {
-    const bar = document.querySelector(`[data-hp-id="${char.id}"]`);
-    if (bar) {
-        const percent = Math.max(0, (char.currentHp / char.hp) * 100);
-        bar.style.width = `${percent}%`;
-    }
-}
-function renderBattleTeams(playerTeam, enemyTeam) {
-    const pSide = document.getElementById('battlePlayerSide');
-    const eSide = document.getElementById('battleEnemySide');
-
-    const cardHTML = (char) => `
-        <div class="flex flex-col items-center p-2 bg-slate-800 rounded-lg border border-slate-600 transition-all duration-300" data-id="${char.id}">
-            <img src="${char.image}" class="w-16 h-16 rounded-full border-2 border-indigo-500 shadow-glow mb-2 object-cover">
-            <div class="text-xs font-bold uppercase">${char.name}</div>
-            <div class="hp-bar-container">
-                <div class="hp-bar-fill" data-hp-id="${char.id}" style="width: 100%"></div>
-            </div>
-            <div class="text-[10px] text-slate-400 mt-1">ATK: ${char.atk}</div>
-        </div>
-    `;
-
-    pSide.innerHTML = playerTeam.map(cardHTML).join('');
-    eSide.innerHTML = enemyTeam.map(cardHTML).join('');
-}
 // ============================================
 // INITIALIZE
 // ============================================
@@ -1117,8 +1861,102 @@ function renderBattleTeams(playerTeam, enemyTeam) {
 async function init() {
   await loadPlayerData();
   await loadStatus();
+  initWeatherEngine();
   showScreen('home');
 }
+
+function setAtmosphereMode(mode) {
+  var validModes = ['time-dawn', 'time-noon', 'time-sunset', 'time-midnight'];
+  validModes.forEach(function(m) { document.body.classList.remove(m); });
+  if (validModes.indexOf(mode) !== -1) {
+    document.body.classList.add(mode);
+    var labels = {
+      'time-dawn': '🌅 Atmosfera: Alvorada Shinobi (3200K / Luz Âmbar)',
+      'time-noon': '☀️ Atmosfera: Meio-Dia Direct (6500K / Sol Pleno)',
+      'time-sunset': '🌇 Atmosfera: Pôr do Sol Dramático (2400K / Tom Rubi)',
+      'time-midnight': '🌕 Atmosfera: Lua Sangrenta (10000K / Místico)'
+    };
+    showToast(labels[mode] || 'Atmosfera alterada.', 'info');
+  }
+}
+
+// ============================================
+// UI AUDIO SYNTHESIZER ENGINE (PHASE 7)
+// ============================================
+
+var audioCtx = null;
+
+function getAudioContext() {
+  if (!audioCtx) {
+    var AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) audioCtx = new AudioContext();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function playUISound(type) {
+  try {
+    var ctx = getAudioContext();
+    if (!ctx) return;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    var now = ctx.currentTime;
+
+    if (type === 'hover') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(600, now + 0.02);
+      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+      osc.start(now);
+      osc.stop(now + 0.03);
+    } else if (type === 'click') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(700, now);
+      osc.frequency.exponentialRampToValueAtTime(300, now + 0.04);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.start(now);
+      osc.stop(now + 0.05);
+    } else if (type === 'modal') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(750, now + 0.08);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.start(now);
+      osc.stop(now + 0.09);
+    } else if (type === 'success') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now); // C5
+      osc.frequency.setValueAtTime(659.25, now + 0.06); // E5
+      osc.frequency.setValueAtTime(783.99, now + 0.12); // G5
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    }
+  } catch (err) { /* silent audio fallback */ }
+}
+
+function attachUIAudioListeners() {
+  document.addEventListener('click', function(event) {
+    if (event.target.closest('button, .nav-tab, select')) playUISound('click');
+  });
+  document.addEventListener('mouseover', function(event) {
+    var target = event.target.closest('button, .nav-tab, select');
+    if (target && (!event.relatedTarget || !target.contains(event.relatedTarget))) playUISound('hover');
+  });
+}
+
+// Auto-attach audio listeners on DOM content loaded & screen transitions
+document.addEventListener('click', function() { getAudioContext(); }, { once: true });
 
 // ============================================
 // GLOBAL GAME OBJECT
@@ -1137,21 +1975,39 @@ window.Game = {
   sellCard: sellCard,
   addToSquad: addToSquad,
   removeFromSquad: removeFromSquad,
+  renderSquadBuilder: renderSquadBuilder,
+  autoSquadStrongest: autoSquadStrongest,
+  clearSquad: clearSquad,
   saveSquad: saveSquad,
   quickBattle: quickBattle,
   startSquadBattle: startSquadBattle,
   startBossBattle: startBossBattle,
   fightTower: fightTower,
   resetTower: resetTower,
+  toggleTowerRoadmap: toggleTowerRoadmap,
   challengePvp: challengePvp,
   selectEquipment: selectEquipment,
+  filterEquipmentType: filterEquipmentType,
+  setForgeTab: setForgeTab,
+  deselectEquipment: deselectEquipment,
+  selectEquipmentForFusion: selectEquipmentForFusion,
+  fuseEquipment: fuseEquipment,
   equipItem: equipItem,
   unequipItem: unequipItem,
+  upgradeEquipment: upgradeEquipment,
+  setBattleSpeed: setBattleSpeed,
+  skipBattleAnimation: skipBattleAnimation,
   showRanking: showRanking,
   closeBattle: closeBattle,
+  setAtmosphereMode: setAtmosphereMode,
+  setWeatherMode: setWeatherMode,
+  playUISound: playUISound,
   loadPlayerData: loadPlayerData,
   init: init
 };
 
 // Auto-init on load
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', function() {
+  init();
+  attachUIAudioListeners();
+});

@@ -17,6 +17,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const USERNAME_PATTERN = /^[A-Za-z0-9_-]{3,32}$/;
+
+function isValidUsername(value: unknown): value is string {
+  return typeof value === 'string' && USERNAME_PATTERN.test(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, '../front-end')));
 
@@ -241,6 +251,7 @@ app.post('/battle/choice', async (req, res) => {
     res.json({
       result: result.winner,
       log: result.log,
+      turns: result.turns,
       xpGained,
       goldGained,
       levelUpMessages,
@@ -311,6 +322,7 @@ app.post('/battle/squad', async (req, res) => {
     res.json({
       result: result.winner,
       log: result.log,
+      turns: result.turns,
       goldGained,
       xpGained,
       levelUpMessages,
@@ -382,6 +394,7 @@ app.post('/battle/boss', async (req, res) => {
     res.json({
       result: result.winner,
       log: result.log,
+      turns: result.turns,
       goldGained,
       xpGained,
       levelUpMessages,
@@ -629,8 +642,8 @@ app.post('/pvp/challenge', async (req, res) => {
   try {
     const { attackerUsername, defenderUsername } = req.body;
 
-    if (!attackerUsername || !defenderUsername) {
-      return res.status(400).json({ error: 'Both attacker and defender usernames required.' });
+    if (!isValidUsername(attackerUsername) || !isValidUsername(defenderUsername)) {
+      return res.status(400).json({ error: 'Usernames must contain 3-32 letters, numbers, underscores, or hyphens.' });
     }
 
     if (attackerUsername === defenderUsername) {
@@ -701,6 +714,7 @@ app.post('/pvp/challenge', async (req, res) => {
       result: result.winner === 'player' ? 'attacker_wins' : 'defender_wins',
       winner: result.winner === 'player' ? attackerUsername : defenderUsername,
       log: result.log,
+      turns: result.turns,
       background: bg,
       attackerSquad: attackerCards.map(c => ({ ...c.toObject ? c.toObject() : c, effectiveStats: getEffectiveStats(c) })),
       defenderSquad: defenderCards.map(c => ({ ...c.toObject ? c.toObject() : c, effectiveStats: getEffectiveStats(c) })),
@@ -709,6 +723,101 @@ app.post('/pvp/challenge', async (req, res) => {
         defender: { pvpPoints: defender.pvpPoints, pvpWins: defender.pvpWins, pvpLosses: defender.pvpLosses }
       }
     });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export function getPvpTier(pvpPoints: number): { name: string; icon: string; badgeColor: string } {
+  if (pvpPoints >= 1000) return { name: 'Kage', icon: '👑', badgeColor: 'text-amber-400' };
+  if (pvpPoints >= 600) return { name: 'ANBU', icon: '⚡', badgeColor: 'text-purple-400' };
+  if (pvpPoints >= 300) return { name: 'Jonin', icon: '🥇', badgeColor: 'text-indigo-400' };
+  if (pvpPoints >= 100) return { name: 'Chunin', icon: '🥈', badgeColor: 'text-blue-400' };
+  return { name: 'Genin', icon: '🥉', badgeColor: 'text-slate-400' };
+}
+
+async function seedRivalBots() {
+  const bots = [
+    { username: 'SasukeRival', points: 450 },
+    { username: 'MadaraUchiha', points: 950 },
+    { username: 'PainAkatsuki', points: 720 },
+    { username: 'ItachiShadow', points: 550 },
+    { username: 'GaaraSandHost', points: 280 },
+    { username: 'NejiHyuga', points: 150 }
+  ];
+
+  for (const bot of bots) {
+    let u = await User.findOne({ username: bot.username });
+    if (!u) {
+      const inventory = [
+        generateCard(), generateCard(), generateCard(), generateCard(), generateCard()
+      ];
+      u = new User({
+        username: bot.username,
+        gold: 2000,
+        pvpPoints: bot.points,
+        pvpWins: Math.floor(bot.points / 15),
+        pvpLosses: Math.floor(Math.random() * 5),
+        inventory: inventory,
+        squad: inventory.map(c => c.id)
+      });
+      await u.save();
+    }
+  }
+}
+
+// ============================================
+// GET /pvp/opponents/:username
+// ============================================
+app.get('/pvp/opponents/:username', async (req, res) => {
+  try {
+    const currentUsername = req.params.username;
+    if (!isValidUsername(currentUsername)) {
+      return res.status(400).json({ error: 'Invalid username.' });
+    }
+    await seedRivalBots();
+
+    const users = await User.find({ username: { $ne: currentUsername }, 'squad.0': { $exists: true } })
+      .sort({ pvpPoints: -1 });
+    const opponents = users.map(u => {
+      const inv = u.inventory.filter(c => c != null);
+      const squadCards = u.squad.map(id => inv.find(c => c.id === id)).filter(c => c != null) as ICard[];
+      const totalPower = squadCards.reduce((sum, c) => {
+        const stats = getEffectiveStats(c);
+        return sum + stats.atk + stats.maxHp;
+      }, 0);
+      const tier = getPvpTier(u.pvpPoints);
+
+      if (squadCards.length === 0) return null;
+
+      return {
+        username: u.username,
+        pvpPoints: u.pvpPoints,
+        pvpWins: u.pvpWins,
+        pvpLosses: u.pvpLosses,
+        squadSize: squadCards.length,
+        totalPower,
+        tier
+      };
+    }).filter((opponent): opponent is NonNullable<typeof opponent> => opponent != null).slice(0, 10);
+
+    res.json(opponents);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// GET /pvp/history/:username
+// ============================================
+app.get('/pvp/history/:username', async (req, res) => {
+  try {
+    const user = await getOrCreateUser(req.params.username);
+    const history = (user.battleHistory || [])
+      .filter(b => b.type === 'pvp')
+      .slice(-10)
+      .reverse();
+    res.json(history);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -725,6 +834,7 @@ app.get('/ranking/pvp', async (_req, res) => {
       pvpPoints: u.pvpPoints,
       pvpWins: u.pvpWins,
       pvpLosses: u.pvpLosses,
+      tier: getPvpTier(u.pvpPoints),
       winRate: u.pvpWins + u.pvpLosses > 0
         ? Math.round((u.pvpWins / (u.pvpWins + u.pvpLosses)) * 100)
         : 0
@@ -766,6 +876,7 @@ app.post('/tower/fight', async (req, res) => {
       id: `tower-enemy-${currentFloor}-${i}`,
       name: e.name,
       element: e.element,
+      image: (e as any).image || '/images/naruto.jpg',
       atk: e.atk,
       hp: e.hp,
       maxHp: e.maxHp,
@@ -822,6 +933,7 @@ app.post('/tower/fight', async (req, res) => {
       floor: currentFloor,
       result: result.winner,
       log: result.log,
+      turns: result.turns,
       goldGained,
       xpGained,
       levelUpMessages,
@@ -1019,6 +1131,263 @@ app.get('/equipment/list/:username', async (req, res) => {
 });
 
 // ============================================
+// POST /equipment/upgrade
+// ============================================
+app.post('/equipment/upgrade', async (req, res) => {
+  try {
+    const { username, equipmentId } = req.body;
+    if (!isValidUsername(username) || !isNonEmptyString(equipmentId)) {
+      return res.status(400).json({ error: 'Invalid username or equipment ID.' });
+    }
+    const user = await getOrCreateUser(username);
+
+    let equipment: IEquipmentItem | null = null;
+
+    // Check equipment inventory
+    const eqIdx = user.equipmentInventory.findIndex(e => e != null && e.id === equipmentId);
+    if (eqIdx !== -1) {
+      equipment = user.equipmentInventory[eqIdx];
+    } else {
+      // Check equipped on cards
+      for (const card of user.inventory) {
+        if (card != null && card.equipment) {
+          const slots = ['Weapon', 'Armor', 'Helmet', 'Boots', 'Scroll', 'Ring'] as const;
+          for (const s of slots) {
+            const eq = card.equipment[s];
+            if (eq != null && eq.id === equipmentId) {
+              equipment = eq;
+              break;
+            }
+          }
+        }
+        if (equipment) break;
+      }
+    }
+
+    if (!equipment) {
+      return res.status(404).json({ error: 'Equipment item not found.' });
+    }
+
+    const currentLevel = equipment.level || 1;
+    if (currentLevel >= 10) {
+      return res.status(400).json({ error: 'Equipment already at MAX level (10)!' });
+    }
+
+    const cost = 150 * currentLevel;
+    if (user.gold < cost) {
+      return res.status(400).json({ error: `Not enough gold. Need ${cost}G to upgrade.` });
+    }
+
+    user.gold -= cost;
+    equipment.level = currentLevel + 1;
+    equipment.atkBonus = Math.floor(equipment.atkBonus * 1.25 + 5);
+    equipment.hpBonus = Math.floor(equipment.hpBonus * 1.25 + 20);
+
+    user.markModified('inventory');
+    user.markModified('equipmentInventory');
+    await user.save();
+
+    res.json({
+      message: `${equipment.name} upgraded to Lv.${equipment.level}! (+ATK: ${equipment.atkBonus}, +HP: ${equipment.hpBonus})`,
+      equipment,
+      currentGold: user.gold
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// POST /equipment/fuse
+// ============================================
+app.post('/equipment/fuse', async (req, res) => {
+  try {
+    const { username, item1Id, item2Id } = req.body;
+    if (!isValidUsername(username) || !isNonEmptyString(item1Id) || !isNonEmptyString(item2Id) || item1Id === item2Id) {
+      return res.status(400).json({ error: 'Please select two different equipment items to fuse.' });
+    }
+
+    const user = await getOrCreateUser(username);
+
+    const idx1 = user.equipmentInventory.findIndex(e => e != null && e.id === item1Id);
+    const idx2 = user.equipmentInventory.findIndex(e => e != null && e.id === item2Id);
+
+    if (idx1 === -1 || idx2 === -1) {
+      return res.status(400).json({ error: 'One or both equipment items were not found in your inventory.' });
+    }
+
+    const item1 = user.equipmentInventory[idx1];
+    const item2 = user.equipmentInventory[idx2];
+
+    if (item1.rarity !== item2.rarity) {
+      return res.status(400).json({ error: `Both items must be of the same rarity to fuse! (${item1.rarity} vs ${item2.rarity})` });
+    }
+
+    if (item1.type !== item2.type) {
+      return res.status(400).json({ error: `Both items must be of the same slot type! (${item1.type} vs ${item2.type})` });
+    }
+
+    const rarities: Array<'Common' | 'Rare' | 'Epic' | 'Legendary' | 'SSR' | 'UR'> = ['Common', 'Rare', 'Epic', 'Legendary', 'SSR', 'UR'];
+    const currentRarityIdx = rarities.indexOf(item1.rarity);
+
+    if (currentRarityIdx === -1 || currentRarityIdx >= rarities.length - 1) {
+      return res.status(400).json({ error: 'Cannot fuse UR rarity equipment further!' });
+    }
+
+    const fusionCosts: Record<string, number> = {
+      Common: 200,
+      Rare: 500,
+      Epic: 1000,
+      Legendary: 2500,
+      SSR: 5000
+    };
+
+    const cost = fusionCosts[item1.rarity] || 300;
+    if (user.gold < cost) {
+      return res.status(400).json({ error: `Not enough gold for fusion. Requires ${cost}G.` });
+    }
+
+    user.gold -= cost;
+
+    const nextRarity = rarities[currentRarityIdx + 1];
+    const newAtk = Math.floor(Math.max(item1.atkBonus, item2.atkBonus) * 1.6 + 10);
+    const newHp = Math.floor(Math.max(item1.hpBonus, item2.hpBonus) * 1.6 + 40);
+
+    const fusedItem: IEquipmentItem = {
+      id: `eq-fused-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      name: `${nextRarity} ${item1.type}`,
+      type: item1.type,
+      rarity: nextRarity,
+      atkBonus: newAtk,
+      hpBonus: newHp,
+      level: 1
+    };
+
+    const indices = [idx1, idx2].sort((a, b) => b - a);
+    user.equipmentInventory.splice(indices[0], 1);
+    user.equipmentInventory.splice(indices[1], 1);
+
+    user.equipmentInventory.push(fusedItem);
+
+    user.markModified('equipmentInventory');
+    await user.save();
+
+    res.json({
+      message: `✨ Fusion Success! Created ${fusedItem.rarity} ${fusedItem.name} (+ATK: ${fusedItem.atkBonus}, +HP: ${fusedItem.hpBonus})!`,
+      fusedItem,
+      currentGold: user.gold,
+      equipmentInventory: user.equipmentInventory
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// POST /equipment/sell
+// ============================================
+app.post('/equipment/sell', async (req, res) => {
+  try {
+    const { username, equipmentId } = req.body;
+    if (!isValidUsername(username) || !isNonEmptyString(equipmentId)) {
+      return res.status(400).json({ error: 'Invalid username or equipment ID.' });
+    }
+    const user = await getOrCreateUser(username);
+
+    const eqIdx = user.equipmentInventory.findIndex(e => e != null && e.id === equipmentId);
+    if (eqIdx === -1) {
+      return res.status(404).json({ error: 'Equipment not found in your inventory.' });
+    }
+
+    const equipment = user.equipmentInventory[eqIdx];
+    const rarityGold: Record<string, number> = {
+      Common: 50,
+      Rare: 150,
+      Epic: 400,
+      Legendary: 1000,
+      SSR: 2500,
+      UR: 5000
+    };
+
+    const goldValue = (rarityGold[equipment.rarity] || 100) + (equipment.level || 1) * 50;
+    user.gold += goldValue;
+    user.equipmentInventory.splice(eqIdx, 1);
+
+    user.markModified('equipmentInventory');
+    await user.save();
+
+    res.json({
+      message: `Sold ${equipment.name} for +${goldValue}G!`,
+      goldGained: goldValue,
+      currentGold: user.gold
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// POST /equipment/refine
+// ============================================
+app.post('/equipment/refine', async (req, res) => {
+  try {
+    const { username, targetEquipmentId, sacrificeEquipmentId } = req.body;
+    if (!isValidUsername(username) || !isNonEmptyString(targetEquipmentId) || !isNonEmptyString(sacrificeEquipmentId) || targetEquipmentId === sacrificeEquipmentId) {
+      return res.status(400).json({ error: 'Select two different equipment items and a valid username.' });
+    }
+    const user = await getOrCreateUser(username);
+
+    // Find target item
+    const targetIdx = user.equipmentInventory.findIndex(e => e != null && e.id === targetEquipmentId);
+    if (targetIdx === -1) {
+      return res.status(404).json({ error: 'Target equipment not found.' });
+    }
+    const target = user.equipmentInventory[targetIdx];
+
+    const currentStars = target.stars || 0;
+    if (currentStars >= 5) {
+      return res.status(400).json({ error: 'Equipment is already at maximum 5 Stars!' });
+    }
+
+    // Find sacrifice item
+    const sacIdx = user.equipmentInventory.findIndex(e => e != null && e.id === sacrificeEquipmentId && e.id !== targetEquipmentId);
+    if (sacIdx === -1) {
+      return res.status(400).json({ error: 'Sacrifice equipment item not found in inventory.' });
+    }
+    const sacrifice = user.equipmentInventory[sacIdx];
+
+    if (sacrifice.type !== target.type) {
+      return res.status(400).json({ error: `Sacrifice item must be of type ${target.type}.` });
+    }
+
+    const refineCost = 300 * (currentStars + 1);
+    if (user.gold < refineCost) {
+      return res.status(400).json({ error: `Need ${refineCost}G to refine star.` });
+    }
+
+    user.gold -= refineCost;
+    target.stars = currentStars + 1;
+    target.atkBonus = Math.floor(target.atkBonus * 1.30 + 10);
+    target.hpBonus = Math.floor(target.hpBonus * 1.30 + 35);
+    target.rankSymbol = '⭐'.repeat(target.stars);
+
+    // Remove sacrifice item
+    user.equipmentInventory.splice(sacIdx, 1);
+
+    user.markModified('equipmentInventory');
+    await user.save();
+
+    res.json({
+      message: `Refined ${target.name} to ${target.stars}⭐ Stars! (+ATK: ${target.atkBonus}, +HP: ${target.hpBonus})`,
+      targetEquipment: target,
+      currentGold: user.gold
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
 // POST /admin/cleanInventory
 // ============================================
 app.post('/admin/cleanInventory', async (req, res) => {
@@ -1097,7 +1466,10 @@ app.post('/admin/addgold', async (req, res) => {
 // ============================================
 // Start Server
 // ============================================
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const PORT = Number(process.env.PORT || 3000);
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🎮 Shinobi Legends server running on http://localhost:${PORT}`);
+  if (process.env.NETWORK_HOST) {
+    console.log(`📡 Local Network Access: http://${process.env.NETWORK_HOST}:${PORT}`);
+  }
 });

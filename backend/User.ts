@@ -4,13 +4,13 @@ export interface IEquipmentItem {
   id: string;
   name: string;
   type: 'Weapon' | 'Armor' | 'Helmet' | 'Boots' | 'Scroll' | 'Ring';
-  rarity: 'Rare' | 'Epic' | 'Legendary' | 'SSR' | 'UR';
-  stars: number;
-  rankSymbol: string;
+  rarity: 'Common' | 'Rare' | 'Epic' | 'Legendary' | 'SSR' | 'UR';
+  stars?: number;
+  rankSymbol?: string;
   atkBonus: number;
   hpBonus: number;
   level: number;
-  evolutionPoints: number;
+  evolutionPoints?: number;
   toObject?(): any; // Método do Mongoose para subdocuments
 }
 
@@ -63,7 +63,7 @@ const EquipmentItemSchema = new Schema({
   id: { type: String, required: true },
   name: { type: String, required: true },
   type: { type: String, enum: ['Weapon', 'Armor', 'Helmet', 'Boots', 'Scroll', 'Ring'], required: true },
-  rarity: { type: String, enum: ['Rare', 'Epic', 'Legendary', 'SSR', 'UR'], required: true },
+  rarity: { type: String, enum: ['Common', 'Rare', 'Epic', 'Legendary', 'SSR', 'UR'], required: true },
   stars: { type: Number, default: 0 },
   rankSymbol: { type: String, default: '⭐' },
   atkBonus: { type: Number, default: 0 },
